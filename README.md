@@ -11,7 +11,7 @@ O banco é SQL Server e o aplicativo abre no navegador (Python + Streamlit).
 
 > **Regra do professor:** toda inclusão, alteração, exclusão e consulta é feita por
 > **stored procedure**. O aplicativo nunca acessa as tabelas diretamente; ele só executa
-> `EXEC usp_...` (veja `db.py`). Todas as tabelas estão na 3ª forma normal (3FN).
+> `EXEC usp_...` (veja a pasta `dados/`). Todas as tabelas estão na 3ª forma normal (3FN).
 
 ---
 
@@ -155,6 +155,55 @@ e o produto pode mudar de preço depois.
 
 ---
 
+## Estrutura do código (para a apresentação)
+
+O código Python é dividido em **camadas**. Cada camada tem uma responsabilidade, e uma camada
+só "conversa" com as de baixo. A ideia vem da *Clean Architecture*, simplificada: neste sistema
+as **regras de negócio ficam no banco** (procedures e trigger), então o Python não tem uma camada
+de regras própria. Ele só mostra as telas e chama as procedures.
+
+```
+   app.py ............ porta de entrada: monta o menu e abre a tela escolhida
+     │
+   paginas/ .......... as TELAS (Início, Pedidos, Relatórios, Cadastros)
+     │      ╲
+     │    componentes/ ... PEÇAS de tela reaproveitadas (painel, tabela, gráfico...)
+     │
+   dados/ ............ ACESSO AO BANCO: só executa stored procedures (EXEC)
+     │
+   SQL Server ........ tabelas + procedures + trigger (as regras de negócio)
+
+   util/ ............. ferramentas usadas por todos (formatar R$, datas, %)
+   config.py ......... lê o arquivo .env (qual banco, modo de conexão)
+```
+
+| Pasta / arquivo | O que tem | Exemplo |
+|---|---|---|
+| `app.py` | Configuração da página, menu do topo, faixa de status | escolhe qual tela mostrar |
+| `paginas/` | Uma tela por arquivo, cada uma com a função `render()` | `paginas/cadastros/clientes.py` |
+| `componentes/` | Peças de tela usadas por várias telas. **Não acessam o banco** | `painel()`, `tabela()`, `grafico_barras()` |
+| `dados/` | Um arquivo por assunto, com funções de nome claro. **Único lugar que fala com o banco** | `dados/clientes.py`: `listar()`, `cadastrar()`, `atualizar()`, `excluir()` |
+| `dados/conexao.py` | Conecta no SQL Server e executa as procedures | monta o `EXEC usp_...` |
+| `util/` | Formatação (R$ 1.234,56, 12/11/2026, 5,00%) e o erro de banco | `brl()`, `ErroBanco` |
+| `config.py` | Lê o `.env` | `DB_MODE`, `DB_NAME` |
+| `ui/` | Visual: CSS do layout e logo | `estilo.css` |
+
+**Exemplo do caminho de um clique** — cadastrar um cliente:
+
+1. A tela `paginas/cadastros/clientes.py` mostra o formulário e, no clique, chama `dados.clientes.cadastrar(...)`.
+2. `dados/clientes.py` executa `EXEC usp_CadastrarCliente ...` pela `dados/conexao.py`.
+3. A **procedure** valida (nome, CPF, região) e grava. Se algo estiver errado, ela dá `THROW`.
+4. O erro volta como `ErroBanco` e a tela mostra a mensagem do banco em vermelho.
+
+**Por que separar assim?**
+
+- A regra do professor ("só procedures") fica fácil de provar: só a pasta `dados/` tem `EXEC`,
+  e nenhuma tela importa o `pyodbc`.
+- Para mudar o visual, mexe-se em `paginas/`, `componentes/` ou `ui/`, sem tocar no acesso ao banco.
+- Se uma procedure mudar de nome, o ajuste é num lugar só (`dados/`).
+
+---
+
 ## Problemas comuns
 
 | Mensagem | O que fazer |
@@ -190,8 +239,12 @@ cp .env.example .env   # e ajuste: DB_MODE=docker, DB_PASSWORD=<sua senha>
 ### Estrutura
 
 ```
-app.py                      telas (Streamlit)
-db.py                       acesso ao banco — só EXEC de stored procedures
+app.py                      ponto de entrada: página, CSS, menu, faixa de status
+config.py                   leitura do .env
+paginas/                    telas: inicio, pedidos, relatorios, cadastros/{vendedores,regioes,clientes,produtos}
+componentes/                peças de tela: painel, tabela, gráfico, faixa de status, formulários de cadastro
+dados/                      acesso ao banco (só EXEC): conexao + um arquivo por assunto
+util/                       formatação (R$, datas, %) e o erro de banco compartilhado
 requirements.txt            dependências Python (com versões fixas)
 .env.example                modelo de configuração (copiado para .env)
 rodar.bat / rodar.sh        abrem o sistema no Windows / Linux
