@@ -1,0 +1,5 @@
+# Quebras de linha garantidas em qualquer clone/ZIP
+*.bat text eol=crlf
+*.sql text eol=crlf
+*.sh  text eol=lf
+*.py  text eol=lf
