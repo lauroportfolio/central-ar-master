@@ -92,12 +92,17 @@ Dê **dois cliques em `rodar.bat`**.
 
 ## Usando o sistema
 
+O menu fica no topo: **Início · Pedidos · Relatórios · Cadastros** (Vendedores, Regiões,
+Clientes, Produtos). Logo abaixo, uma faixa mostra o resumo: pedidos, total vendido,
+vendedores e alerta de estoque baixo. A tela inteira cabe na janela; quando uma lista é
+grande, ela rola **dentro** do próprio painel.
+
 | Página | O que dá para fazer |
 |---|---|
-| **Início** | Resumo: total vendido, pedidos, ticket médio, comissões, vendas por região, últimos pedidos e aviso de estoque baixo |
-| **Vendedores, Regiões, Clientes, Produtos** | Tabela com tudo, aba **Incluir** e aba **Editar / excluir**: escolha o registro na lista, altere e salve, ou marque a confirmação e exclua |
-| **Pedidos** | **Novo pedido:** escolha o cliente e o vendedor da região aparece sozinho. A comissão começa com a padrão do vendedor e pode ser mudada. Adicione os itens na tabela; o total é calculado na hora. **Detalhes / editar:** mude dados do pedido, adicione, altere ou remova itens, exclua o pedido |
-| **Relatórios** | Uma aba para cada relatório, com valores em R$ e gráfico de barras |
+| **Início** | Indicadores (total vendido, pedidos, ticket médio, comissões...), gráfico de vendas por região e lista dos últimos pedidos |
+| **Cadastros** | Tabela com busca à esquerda e formulário à direita. Sem nada selecionado, o formulário **cadastra**. **Clique numa linha** para editar ou excluir aquele registro; o botão **Novo** volta para o cadastro |
+| **Pedidos** | Lista de pedidos à esquerda. **Novo pedido:** escolha o cliente e o vendedor da região aparece sozinho. A comissão começa com a padrão do vendedor e pode ser mudada. Adicione os itens na tabela; o **total** aparece em destaque no alto. **Clique num pedido** para ver os itens, adicionar, alterar ou remover itens, mudar os dados ou excluir o pedido |
+| **Relatórios** | Uma aba para cada relatório, com gráfico de barras de um lado e tabela do outro, valores em R$ |
 
 **Mensagens de erro:** quando o banco recusa alguma coisa, a mensagem aparece em vermelho
 com o texto vindo do SQL Server. Exemplos: excluir um cliente que tem pedidos, vender
@@ -190,7 +195,9 @@ db.py                       acesso ao banco — só EXEC de stored procedures
 requirements.txt            dependências Python (com versões fixas)
 .env.example                modelo de configuração (copiado para .env)
 rodar.bat / rodar.sh        abrem o sistema no Windows / Linux
-.streamlit/config.toml      configuração visual do Streamlit
+.streamlit/config.toml      tema (cores, fonte) e opções do Streamlit
+ui/estilo.css               layout em painéis (página sem scroll) e navbar
+ui/logo.svg                 logo da navbar
 sql/00_schema_reconstruido.sql   tabelas + 5 procedures originais
 sql/01_complemento.sql           comissão por pedido, trigger, CRUD e relatórios
 sql/02_seed.sql                  dados de exemplo

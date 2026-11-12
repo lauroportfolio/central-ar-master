@@ -5,9 +5,22 @@ showEmailPrompt = false
 [browser]
 gatherUsageStats = false
 
-[theme]
-primaryColor = "#0B6FB8"
-
 [client]
 # Esconde o botão "Deploy" e as opções de desenvolvedor do menu
 toolbarMode = "viewer"
+
+[theme]
+base = "light"
+primaryColor = "#1E6FD9"
+backgroundColor = "#F3F5F8"
+secondaryBackgroundColor = "#EEF1F5"
+textColor = "#1B2333"
+borderColor = "#DDE2EA"
+dataframeBorderColor = "#E4E8EE"
+dataframeHeaderBackgroundColor = "#F3F5F8"
+baseRadius = "0.5rem"
+baseFontSize = 14
+metricValueFontSize = "1.45rem"
+redColor = "#D93636"
+greenColor = "#1F9D55"
+blueColor = "#1E6FD9"

@@ -1,0 +1,225 @@
+/* =========================================================================
+   Central de Ar Ltda. — estilo do app (único bloco de CSS, carregado no app.py)
+
+   Layout de "painel industrial": a PÁGINA nunca rola. Cada painel é um
+   st.container(key="painel_...", height="stretch"); as regras abaixo fazem
+   todo elemento que CONTÉM um painel ocupar o espaço que sobra na janela,
+   e o scroll fica dentro do painel.
+   Seletores usados: data-testid do Streamlit e as classes st-key-* geradas
+   pelos keys dos nossos containers (não dependem das classes internas).
+   ========================================================================= */
+
+:root {
+    --altura-navbar: 3.5rem;
+    --azul-escuro: #0F1F3D;
+    --azul-claro: #7CB8FF;
+    --destaque: #1E6FD9;
+    --borda: #DDE2EA;
+    --texto: #1B2333;
+    --texto-suave: #5B6576;
+    --verde: #1F9D55;
+    --amarelo: #D69E00;
+    --vermelho: #D93636;
+}
+
+/* ---------------------------------------------------------------- Navbar */
+[data-testid="stHeader"] {
+    background: var(--azul-escuro);
+    height: var(--altura-navbar);
+}
+[data-testid="stTopNavLink"],
+[data-testid="stTopNavSection"] {
+    border-radius: 0;
+    height: var(--altura-navbar);
+    padding: 0 0.9rem;
+}
+[data-testid="stTopNavLink"] p,
+[data-testid="stTopNavSection"] p,
+[data-testid="stTopNavLink"] [data-testid="stIconMaterial"],
+[data-testid="stTopNavSection"] [data-testid="stIconMaterial"],
+[data-testid="stTopNavSection"] svg,
+[data-testid="stMainMenuButton"] svg {
+    color: #E6ECF5;
+}
+[data-testid="stTopNavLink"]:hover,
+[data-testid="stTopNavSection"]:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+[data-testid="stTopNavLink"][aria-current="page"],
+body:has(.marca-cadastros) [data-testid="stTopNavSection"] {
+    box-shadow: inset 0 -3px 0 var(--azul-claro);
+    background: rgba(255, 255, 255, 0.06);
+}
+[data-testid="stTopNavLink"][aria-current="page"] p,
+body:has(.marca-cadastros) [data-testid="stTopNavSection"] p {
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+/* ------------------------------------------------- Página do tamanho da janela */
+[data-testid="stMain"] {
+    overflow: hidden;
+}
+[data-testid="stMainBlockContainer"] {
+    box-sizing: border-box;
+    height: 100vh;
+    max-width: none;
+    /* +15.5px = 12px de respiro entre a navbar e a faixa de status (medido no navegador) */
+    padding: calc(var(--altura-navbar) + 15.5px) 1.25rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+}
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 12px;                                                     /* faixa de status <-> painéis */
+}
+
+/* Cadeia de altura: quem contém um painel estica até o fim da janela */
+[data-testid="stLayoutWrapper"]:has([class*="st-key-painel"]),
+[data-testid="stHorizontalBlock"]:has([class*="st-key-painel"]) {
+    flex: 1 1 0;
+    min-height: 0;
+}
+[data-testid="stColumn"]:has([class*="st-key-painel"]) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+[data-testid="stVerticalBlock"]:has([class*="st-key-painel"]) {
+    min-height: 0;
+}
+
+/* Painéis: cartão branco, scroll interno */
+[class*="st-key-painel"] {
+    overflow-y: auto;
+    background: #FFFFFF;
+}
+/* Painel que só tem uma tabela: quem rola é a própria tabela (evita barra dupla) */
+[class*="st-key-painel"]:has(> [data-testid="stElementContainer"]:only-child [data-testid="stDataFrame"]) {
+    overflow-y: hidden;
+}
+
+.painel-titulo {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--azul-escuro);
+    line-height: 1.6;
+}
+.painel-subtitulo {
+    font-size: 0.82rem;
+    color: var(--texto-suave);
+}
+
+/* ------------------------------------------------------- Faixa de status */
+.faixa-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 1.6rem;
+    padding: 0 0.25rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: var(--texto-suave);
+}
+.faixa-status .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    white-space: nowrap;
+}
+.faixa-status b {
+    color: var(--texto);
+}
+.faixa-status .banco {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: auto;
+    font-size: 0.8rem;
+}
+.ponto {
+    display: inline-block;
+    width: 0.62rem;
+    height: 0.62rem;
+    border-radius: 50%;
+}
+.ponto.verde    { background: var(--verde); }
+.ponto.azul     { background: var(--destaque); }
+.ponto.amarelo  { background: var(--amarelo); }
+.ponto.vermelho { background: var(--vermelho); }
+
+/* ------------------------------------------------- Lista "Últimos pedidos" */
+.lista-pedidos {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.item-pedido {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.1rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--borda);
+    border-left: 4px solid var(--destaque);
+    border-radius: 0.5rem;
+}
+.item-pedido .cliente {
+    font-weight: 600;
+    color: var(--texto);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.item-pedido .detalhe {
+    font-size: 0.8rem;
+    color: var(--texto-suave);
+}
+.item-pedido .total {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    align-self: center;
+    font-weight: 700;
+    color: var(--texto);
+    white-space: nowrap;
+}
+
+/* ------------------------------------------------------ Pedido: destaques */
+.total-destaque {
+    text-align: right;
+    line-height: 1.15;
+}
+.total-destaque span {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--texto-suave);
+}
+.total-destaque strong {
+    font-size: 1.9rem;
+    color: var(--destaque);
+    white-space: nowrap;
+}
+.ficha {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.4rem 1rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--borda);
+    border-radius: 0.5rem;
+    background: #F8FAFC;
+}
+.ficha span {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--texto-suave);
+}
+.ficha b {
+    color: var(--texto);
+}
+
+/* -------------------------------------------------------- KPIs compactos */
+[data-testid="stMetric"] {
+    padding: 0.4rem 0.8rem;
+}
