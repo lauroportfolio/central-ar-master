@@ -9,8 +9,15 @@ gatherUsageStats = false
 # Esconde o botão "Deploy" e as opções de desenvolvedor do menu
 toolbarMode = "viewer"
 
+# Opções comuns aos dois temas.
+# Atenção: cores ficam SÓ em [theme.light] e [theme.dark]. Com cores num [theme] único,
+# o Streamlit entende que o app tem um tema fixo e esconde o seletor Sistema/Claro/Escuro do menu ⋮.
 [theme]
-base = "light"
+baseRadius = "0.5rem"
+baseFontSize = 14
+metricValueFontSize = "1.45rem"
+
+[theme.light]
 primaryColor = "#1E6FD9"
 backgroundColor = "#F3F5F8"
 secondaryBackgroundColor = "#EEF1F5"
@@ -18,9 +25,18 @@ textColor = "#1B2333"
 borderColor = "#DDE2EA"
 dataframeBorderColor = "#E4E8EE"
 dataframeHeaderBackgroundColor = "#F3F5F8"
-baseRadius = "0.5rem"
-baseFontSize = 14
-metricValueFontSize = "1.45rem"
 redColor = "#D93636"
 greenColor = "#1F9D55"
 blueColor = "#1E6FD9"
+
+[theme.dark]
+primaryColor = "#1E6FD9"
+backgroundColor = "#0B1220"
+secondaryBackgroundColor = "#1A2333"
+textColor = "#E5E9F0"
+borderColor = "#2A3446"
+dataframeBorderColor = "#253044"
+dataframeHeaderBackgroundColor = "#151D2B"
+redColor = "#F06464"
+greenColor = "#34C77B"
+blueColor = "#4C8EEA"

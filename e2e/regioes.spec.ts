@@ -1,4 +1,5 @@
 import { test, expect } from './helpers/fixtures';
+import { padrao, t } from './helpers/textos';
 import { cpfUnico, sufixo, unico } from './helpers/db';
 import {
   abrir, buscar, recarregar, clicar, escolher, esperarErro, esperarToast, excluirComConfirmacao,
@@ -17,10 +18,10 @@ test.describe('Regiões', () => {
     const nome = unico('Região');
     const form = painel(page, 'form_regioes');
 
-    await preencher(form, { 'Nome da região *': nome, 'Descrição (bairros, cidades...)': 'Bairros de teste' });
-    await escolher(page, form, 'Vendedor responsável *', vendedor);
-    await clicar(page, form, 'Cadastrar região');
-    await esperarToast(page, 'Região cadastrada');
+    await preencher(form, { 'cadastros.regioes.campo_nome': nome, 'cadastros.regioes.campo_descricao_novo': 'Bairros de teste' });
+    await escolher(page, form, 'cadastros.regioes.campo_vendedor', vendedor);
+    await clicar(page, form, 'cadastros.regioes.botao_cadastrar');
+    await esperarToast(page, 'cadastros.regioes.cadastrado');
 
     expect(await db.regiao(nome)).toMatchObject({ nome, fk_vendedor: idVendedor, descricao: 'Bairros de teste' });
     const lista = painel(page, 'lista_regioes');
@@ -53,10 +54,10 @@ test.describe('Regiões', () => {
     const form = painel(page, 'form_regioes');
 
     await selecionarPorBusca(page, lista, nome);
-    await preencher(form, { 'Nome da região *': novoNome });
-    await escolher(page, form, 'Vendedor responsável *', outroVendedor);
-    await clicar(page, form, 'Salvar alterações');
-    await esperarToast(page, 'Região atualizada');
+    await preencher(form, { 'cadastros.regioes.campo_nome': novoNome });
+    await escolher(page, form, 'cadastros.regioes.campo_vendedor', outroVendedor);
+    await clicar(page, form, 'comum.salvar_alteracoes');
+    await esperarToast(page, 'cadastros.regioes.atualizado');
 
     expect(await db.regiao(novoNome)).toMatchObject({ fk_vendedor: idOutro });
     await buscar(page, lista, novoNome);
@@ -70,18 +71,18 @@ test.describe('Regiões', () => {
     const form = painel(page, 'form_regioes');
 
     await selecionarPorBusca(page, lista, nome);
-    await excluirComConfirmacao(page, form, 'região');
-    await esperarToast(page, 'Região excluída');
+    await excluirComConfirmacao(page, form, 'cadastros.regioes');
+    await esperarToast(page, 'cadastros.regioes.excluido');
 
     expect(await db.regiao(nome)).toBeUndefined();
     await buscar(page, lista, nome);
-    await expect(lista.getByText('Nenhum registro encontrado.')).toBeVisible();
+    await expect(lista.getByText(t('comum.nenhum_registro'))).toBeVisible();
   });
 
   test('erro: nome da região é obrigatório', async ({ page, db }) => {
     const form = painel(page, 'form_regioes');
-    await clicar(page, form, 'Cadastrar região');
-    await esperarErro(form, 'O nome da regiao e obrigatorio.');
+    await clicar(page, form, 'cadastros.regioes.botao_cadastrar');
+    await esperarErro(form, 'erros.50003');
     // nada gravado com nome em branco (sem comparar totais: outros testes gravam em paralelo)
     expect(await db.consulta("SELECT nome FROM REGIAO WHERE LTRIM(RTRIM(nome)) = ''")).toEqual([]);
   });
@@ -94,8 +95,8 @@ test.describe('Regiões', () => {
     const form = painel(page, 'form_regioes');
 
     await selecionarPorBusca(page, lista, nome);
-    await excluirComConfirmacao(page, form, 'região');
-    await esperarErro(form, 'Nao e possivel excluir: a regiao possui 1 cliente(s)');
+    await excluirComConfirmacao(page, form, 'cadastros.regioes');
+    await esperarErro(form, t('erros.50025', { qtd: 1 }));
     expect(await db.regiao(nome)).toBeDefined();
   });
 });

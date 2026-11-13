@@ -1,4 +1,5 @@
 import { test, expect } from './helpers/fixtures';
+import { padrao, t } from './helpers/textos';
 import { sufixo, unico } from './helpers/db';
 import {
   abrir, buscar, clicar, esperarErro, esperarToast, excluirComConfirmacao,
@@ -13,9 +14,9 @@ test.describe('Produtos', () => {
   test('cadastrar produto: aparece na tabela e no banco', async ({ page, db }) => {
     const descricao = unico('Produto Split');
     const form = painel(page, 'form_produtos');
-    await preencher(form, { 'Descrição *': descricao, 'Preço (R$) *': '1234.56', 'Estoque *': '12' });
-    await clicar(page, form, 'Cadastrar produto');
-    await esperarToast(page, 'Produto cadastrado');
+    await preencher(form, { 'cadastros.produtos.campo_descricao': descricao, 'cadastros.produtos.campo_preco': '1234.56', 'cadastros.produtos.campo_estoque': '12' });
+    await clicar(page, form, 'cadastros.produtos.botao_cadastrar');
+    await esperarToast(page, 'cadastros.produtos.cadastrado');
 
     expect(await db.produto(descricao)).toMatchObject({ preco: 1234.56, estoque: 12 });
     const lista = painel(page, 'lista_produtos');
@@ -43,9 +44,9 @@ test.describe('Produtos', () => {
     const form = painel(page, 'form_produtos');
 
     await selecionarPorBusca(page, lista, descricao);
-    await preencher(form, { 'Preço (R$) *': '150.75', 'Estoque *': '8' });
-    await clicar(page, form, 'Salvar alterações');
-    await esperarToast(page, 'Produto atualizado');
+    await preencher(form, { 'cadastros.produtos.campo_preco': '150.75', 'cadastros.produtos.campo_estoque': '8' });
+    await clicar(page, form, 'comum.salvar_alteracoes');
+    await esperarToast(page, 'cadastros.produtos.atualizado');
 
     expect(await db.produto(descricao)).toMatchObject({ preco: 150.75, estoque: 8 });
     await expect(linhasDaTabela(lista).first()).toContainText('150.75');
@@ -58,18 +59,18 @@ test.describe('Produtos', () => {
     const form = painel(page, 'form_produtos');
 
     await selecionarPorBusca(page, lista, descricao);
-    await excluirComConfirmacao(page, form, 'produto');
-    await esperarToast(page, 'Produto excluído');
+    await excluirComConfirmacao(page, form, 'cadastros.produtos');
+    await esperarToast(page, 'cadastros.produtos.excluido');
 
     expect(await db.produto(descricao)).toBeUndefined();
     await buscar(page, lista, descricao);
-    await expect(lista.getByText('Nenhum registro encontrado.')).toBeVisible();
+    await expect(lista.getByText(t('comum.nenhum_registro'))).toBeVisible();
   });
 
   test('erro: descrição do produto é obrigatória', async ({ page, db }) => {
     const form = painel(page, 'form_produtos');
-    await clicar(page, form, 'Cadastrar produto');
-    await esperarErro(form, 'A descricao do produto e obrigatoria.');
+    await clicar(page, form, 'cadastros.produtos.botao_cadastrar');
+    await esperarErro(form, 'erros.50008');
     // nada gravado com descricao em branco (sem comparar totais: outros testes gravam em paralelo)
     expect(await db.consulta("SELECT descricao FROM PRODUTO WHERE LTRIM(RTRIM(descricao)) = ''")).toEqual([]);
   });
@@ -83,8 +84,8 @@ test.describe('Produtos', () => {
     const form = painel(page, 'form_produtos');
 
     await selecionarPorBusca(page, lista, descricao);
-    await excluirComConfirmacao(page, form, 'produto');
-    await esperarErro(form, 'Nao e possivel excluir: o produto aparece em 1 item(ns) de pedido.');
+    await excluirComConfirmacao(page, form, 'cadastros.produtos');
+    await esperarErro(form, t('erros.50027', { qtd: 1 }));
     expect(await db.produto(descricao)).toBeDefined();
   });
 });

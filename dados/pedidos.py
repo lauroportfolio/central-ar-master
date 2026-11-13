@@ -30,7 +30,7 @@ def cadastrar_com_itens(fk_cliente: int, fk_vendedor: int, percentual_comissao,
     itens: [{"fk_produto": int, "quantidade": num, "preco_unitario": num|None, "desconto": num}]
     """
     if not itens:
-        raise ErroBanco("Inclua pelo menos um item no pedido.")
+        raise ErroBanco("Inclua pelo menos um item no pedido.", chave="erros.pedido_sem_itens")
 
     linhas = [
         "SET NOCOUNT ON; SET XACT_ABORT ON;",

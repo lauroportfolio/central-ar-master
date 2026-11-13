@@ -1,23 +1,16 @@
 import { Page } from '@playwright/test';
 import { test, expect } from './helpers/fixtures';
+import { padrao, t } from './helpers/textos';
 import { sufixo } from './helpers/db';
 import {
-  abrir, adicionarItemNoEditor, campo, clicar, comRerun, escolher, escolherComRerun, esperarErro,
+  abrir, abrirAba, adicionarItemNoEditor, campo, clicar, comRerun, escolher, escolherComRerun, esperarErro,
   esperarToast, excluirComConfirmacao, linhasDaTabela, painel, preencher, selecionarPorBusca, esperarTotalEmDestaque,
 } from './helpers/app';
 
 /** Abre um pedido existente pela lista (busca pelo nome do cliente, que é único no teste). */
 async function abrirPedidoDoCliente(page: Page, cliente: string, idPedido: number) {
   await selecionarPorBusca(page, painel(page, 'lista_pedidos'), cliente);
-  await expect(painel(page, 'pedido').getByText(`Pedido nº ${idPedido}`)).toBeVisible();
-}
-
-/** Aba do pedido aberto (só a aba ativa existe no DOM). */
-async function aba(page: Page, nome: string) {
-  const guia = page.getByRole('tab', { name: nome, exact: true });
-  await guia.click();
-  await expect(guia).toHaveAttribute('aria-selected', 'true');
-  return page.getByRole('tabpanel');
+  await expect(painel(page, 'pedido').getByText(t('pedidos.detalhe.titulo', { id: idPedido }))).toBeVisible();
 }
 
 test.describe('Pedidos', () => {
@@ -29,14 +22,14 @@ test.describe('Pedidos', () => {
 
     await abrir(page, 'Pedidos');
     const corpo = painel(page, 'pedido_corpo');
-    await escolherComRerun(page, corpo, 'Cliente *', c.cliente);
-    await expect(campo(corpo, 'Vendedor (responsável pela região)')).toHaveValue(`${c.vendedor} — ${c.regiao}`);
-    await expect(campo(corpo, 'Comissão deste pedido (%)')).toHaveValue('4.50');
+    await escolherComRerun(page, corpo, 'pedidos.novo.campo_cliente', c.cliente);
+    await expect(campo(corpo, 'pedidos.novo.campo_vendedor')).toHaveValue(`${c.vendedor} — ${c.regiao}`);
+    await expect(campo(corpo, 'pedidos.novo.campo_comissao')).toHaveValue('4.50');
 
     await adicionarItemNoEditor(page, corpo, produto, 0);
     await esperarTotalEmDestaque(painel(page, 'pedido'), 1500);
-    await clicar(page, corpo, 'Salvar pedido');
-    await esperarToast(page, /Pedido nº \d+ cadastrado — total R\$ 1\.500,00/);
+    await clicar(page, corpo, 'pedidos.novo.botao_salvar');
+    await esperarToast(page, padrao('pedidos.novo.cadastrado', { total: 'R$ 1.500,00' }));
 
     const pedidos = await db.pedidosDoCliente(c.idCliente);
     expect(pedidos).toHaveLength(1);
@@ -53,14 +46,14 @@ test.describe('Pedidos', () => {
 
     await abrir(page, 'Pedidos');
     const corpo = painel(page, 'pedido_corpo');
-    await escolherComRerun(page, corpo, 'Cliente *', c.cliente);
-    const comissao = campo(corpo, 'Comissão deste pedido (%)');
+    await escolherComRerun(page, corpo, 'pedidos.novo.campo_cliente', c.cliente);
+    const comissao = campo(corpo, 'pedidos.novo.campo_comissao');
     await comissao.fill('8.25');
     await comRerun(page, () => comissao.press('Enter'));
     await adicionarItemNoEditor(page, corpo, produto, 0);
-    await expect(corpo.getByText('comissão do vendedor: R$ 82,50')).toBeVisible();
-    await clicar(page, corpo, 'Salvar pedido');
-    await esperarToast(page, /Pedido nº \d+ cadastrado/);
+    await expect(corpo.getByText(padrao('pedidos.novo.rodape', { comissao: 'R$ 82,50' }))).toBeVisible();
+    await clicar(page, corpo, 'pedidos.novo.botao_salvar');
+    await esperarToast(page, 'pedidos.novo.cadastrado');
 
     const [pedido] = await db.pedidosDoCliente(c.idCliente);
     expect(pedido.percentual_comissao).toBe(8.25);                  // não usou a comissão fixa (5%)
@@ -80,28 +73,28 @@ test.describe('Pedidos', () => {
     await abrirPedidoDoCliente(page, c.cliente, idPedido);
 
     // adicionar B x3 -> estoque de B 20 -> 17
-    let painelAba = await aba(page, 'Adicionar item');
-    await escolher(page, painelAba, 'Produto', prodB);
-    await preencher(painelAba, { Quantidade: 3 });
-    await clicar(page, painelAba, 'Adicionar item');
-    await esperarToast(page, 'Item adicionado');
+    let painelAba = await abrirAba(page, 'pedidos.detalhe.aba_adicionar');
+    await escolher(page, painelAba, 'pedidos.detalhe.campo_produto', prodB);
+    await preencher(painelAba, { 'pedidos.detalhe.campo_quantidade': 3 });
+    await clicar(page, painelAba, 'pedidos.detalhe.botao_adicionar');
+    await esperarToast(page, 'pedidos.detalhe.item_adicionado');
     expect(await db.estoque(idB)).toBe(17);
     expect(await db.itensDoPedido(idPedido)).toHaveLength(2);
 
     // alterar B de 3 para 5 -> estoque de B 17 -> 15
-    painelAba = await aba(page, 'Itens');
-    await escolherComRerun(page, painelAba, 'Alterar ou remover o item', prodB);
-    await preencher(painelAba, { Quantidade: 5 });
-    await clicar(page, painelAba, 'Salvar item');
-    await esperarToast(page, 'Item atualizado');
+    painelAba = await abrirAba(page, 'pedidos.detalhe.aba_itens');
+    await escolherComRerun(page, painelAba, 'pedidos.detalhe.alterar_item', prodB);
+    await preencher(painelAba, { 'pedidos.detalhe.campo_quantidade': 5 });
+    await clicar(page, painelAba, 'pedidos.detalhe.botao_salvar_item');
+    await esperarToast(page, 'pedidos.detalhe.item_atualizado');
     expect(await db.estoque(idB)).toBe(15);
     expect((await db.itensDoPedido(idPedido)).find((i) => i.fk_produto === idB)?.quantidade).toBe(5);
 
     // remover A -> estoque de A volta para 10
-    painelAba = await aba(page, 'Itens');
-    await escolherComRerun(page, painelAba, 'Alterar ou remover o item', prodA);
-    await clicar(page, painelAba, 'Remover item');
-    await esperarToast(page, 'Item removido');
+    painelAba = await abrirAba(page, 'pedidos.detalhe.aba_itens');
+    await escolherComRerun(page, painelAba, 'pedidos.detalhe.alterar_item', prodA);
+    await clicar(page, painelAba, 'pedidos.detalhe.botao_remover_item');
+    await esperarToast(page, 'pedidos.detalhe.item_removido');
     expect(await db.estoque(idA)).toBe(10);
     expect(await db.itensDoPedido(idPedido)).toMatchObject([{ fk_produto: idB, quantidade: 5 }]);
     await esperarTotalEmDestaque(painel(page, 'pedido'), 1000);
@@ -115,10 +108,10 @@ test.describe('Pedidos', () => {
 
     await abrir(page, 'Pedidos');
     const corpo = painel(page, 'pedido_corpo');
-    await escolherComRerun(page, corpo, 'Cliente *', c.cliente);
+    await escolherComRerun(page, corpo, 'pedidos.novo.campo_cliente', c.cliente);
     await adicionarItemNoEditor(page, corpo, produto, 0);
-    await clicar(page, corpo, 'Salvar pedido');
-    await esperarErro(corpo, `Estoque insuficiente para o produto "${produto}"`);
+    await clicar(page, corpo, 'pedidos.novo.botao_salvar');
+    await esperarErro(corpo, padrao('erros.50022', { produto }));
 
     expect(await db.pedidosDoCliente(c.idCliente)).toEqual([]);     // nem o pedido ficou (transação)
     expect(await db.estoque(idProduto)).toBe(0);
@@ -134,11 +127,11 @@ test.describe('Pedidos', () => {
 
     await abrir(page, 'Pedidos');
     await abrirPedidoDoCliente(page, c.cliente, idPedido);
-    const painelAba = await aba(page, 'Adicionar item');
-    await escolher(page, painelAba, 'Produto', prodB);
-    await preencher(painelAba, { Quantidade: 999 });
-    await clicar(page, painelAba, 'Adicionar item');
-    await esperarErro(painelAba, 'Estoque insuficiente');
+    const painelAba = await abrirAba(page, 'pedidos.detalhe.aba_adicionar');
+    await escolher(page, painelAba, 'pedidos.detalhe.campo_produto', prodB);
+    await preencher(painelAba, { 'pedidos.detalhe.campo_quantidade': 999 });
+    await clicar(page, painelAba, 'pedidos.detalhe.botao_adicionar');
+    await esperarErro(painelAba, 'erros.50022');
 
     expect(await db.itensDoPedido(idPedido)).toMatchObject([{ fk_produto: idA }]);
     expect(await db.estoque(idB)).toBe(5);
@@ -155,14 +148,14 @@ test.describe('Pedidos', () => {
 
     await abrir(page, 'Pedidos');
     await abrirPedidoDoCliente(page, c.cliente, idPedido);
-    const painelAba = await aba(page, 'Excluir pedido');
-    await excluirComConfirmacao(page, painelAba, 'pedido');
-    await esperarToast(page, `Pedido nº ${idPedido} excluído`);
+    const painelAba = await abrirAba(page, 'pedidos.detalhe.aba_excluir');
+    await excluirComConfirmacao(page, painelAba, 'pedidos.detalhe');
+    await esperarToast(page, t('pedidos.detalhe.excluido', { id: idPedido }));
 
     expect(await db.pedido(idPedido)).toBeUndefined();
     expect(await db.itensDoPedido(idPedido)).toEqual([]);
     expect([await db.estoque(idA), await db.estoque(idB)]).toEqual([10, 20]);
-    await expect(painel(page, 'pedido').getByText('Novo pedido')).toBeVisible();
+    await expect(painel(page, 'pedido').getByText(t('pedidos.novo.titulo'))).toBeVisible();
     await expect(linhasDaTabela(painel(page, 'lista_pedidos'))).toHaveCount(0);
   });
 });

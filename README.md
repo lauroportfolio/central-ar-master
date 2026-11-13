@@ -97,6 +97,10 @@ Clientes, Produtos). Logo abaixo, uma faixa mostra o resumo: pedidos, total vend
 vendedores e alerta de estoque baixo. A tela inteira cabe na janela; quando uma lista é
 grande, ela rola **dentro** do próprio painel.
 
+**Tema e idioma:** o tema (Sistema / Claro / Escuro) fica no menu **⋮** do canto direito; o idioma
+(Português / English) no botão **PT / EN** ao lado dele. As duas escolhas continuam valendo depois do F5.
+Passe o mouse (ou use Tab) nos indicadores, botões e ícones **ⓘ** para ver o que cada um significa.
+
 | Página | O que dá para fazer |
 |---|---|
 | **Início** | Indicadores (total vendido, pedidos, ticket médio, comissões...), gráfico de vendas por região e lista dos últimos pedidos |

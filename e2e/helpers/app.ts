@@ -8,8 +8,12 @@
  * - Tabelas (st.dataframe) são desenhadas em canvas (glide-data-grid). Para LER usamos a
  *   tabela de acessibilidade escondida que o glide mantém no DOM (table[role=grid]);
  *   para SELECIONAR uma linha filtramos pela busca até sobrar 1 e clicamos na 1ª linha do canvas.
+ * - Nenhum texto de tela fixo: rótulos, botões, toasts e erros podem ser passados como CHAVE do
+ *   idioma (ex.: 'comum.salvar_alteracoes'); os helpers traduzem lendo locale/pt.json.
  */
 import { expect, Locator, Page } from '@playwright/test';
+import * as textos from './textos';
+import type { Idioma } from './textos';
 
 // ------------------------------------------------------------------ navegação
 
@@ -24,6 +28,18 @@ export const PAGINAS = {
 } as const;
 export type NomePagina = keyof typeof PAGINAS;
 const CADASTROS: NomePagina[] = ['Vendedores', 'Regiões', 'Clientes', 'Produtos'];
+/** Chave do idioma de cada item da navbar. */
+export const CHAVE_NAV: Record<NomePagina, string> = {
+  'Início': 'nav.inicio', Pedidos: 'nav.pedidos', 'Relatórios': 'nav.relatorios', Vendedores: 'nav.vendedores',
+  'Regiões': 'nav.regioes', Clientes: 'nav.clientes', Produtos: 'nav.produtos',
+};
+
+/** Título de painel que indica "um registro está aberto" (Editar ... / Pedido nº ...), nos dois idiomas. */
+const TITULO_ABERTO = new RegExp('^(' + ['pt', 'en'].flatMap((idioma) =>
+  ['cadastros.vendedores.editar', 'cadastros.regioes.editar', 'cadastros.clientes.editar',
+   'cadastros.produtos.editar', 'pedidos.detalhe.titulo']
+    .map((chave) => textos.t(chave, {}, idioma as Idioma).split('{')[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  .join('|') + ')');
 
 // Limite (não é espera fixa: as esperas terminam assim que a condição vale). Telas pesadas,
 // como Relatórios com muitos vendedores, podem levar mais de 15 s com 6 navegadores em paralelo.
@@ -105,14 +121,15 @@ export async function recarregar(page: Page): Promise<void> {
   await esperarStreamlit(page);
 }
 
-export async function irPelaNavbar(page: Page, nome: NomePagina): Promise<void> {
+export async function irPelaNavbar(page: Page, nome: NomePagina, idioma: Idioma = 'pt'): Promise<void> {
+  const rotulo = textos.t(CHAVE_NAV[nome], {}, idioma);
   if (CADASTROS.includes(nome)) {
     await page.getByTestId('stTopNavSection').click();
-    await comRerun(page, () => page.getByTestId('stTopNavDropdownLink').filter({ hasText: nome }).click());
+    await comRerun(page, () => page.getByTestId('stTopNavDropdownLink').filter({ hasText: rotulo }).click());
   } else {
-    await comRerun(page, () => page.getByTestId('stTopNavLink').filter({ hasText: nome }).click());
+    await comRerun(page, () => page.getByTestId('stTopNavLink').filter({ hasText: rotulo }).click());
   }
-  await expect(page).toHaveURL(new RegExp(`/${PAGINAS[nome]}$`));
+  await expect(page).toHaveURL(new RegExp(`/${PAGINAS[nome]}(\\?.*)?$`));
 }
 
 /** Painel do app pelo key (ex.: painel(page, 'form_clientes') -> .st-key-painel_form_clientes). */
@@ -122,8 +139,9 @@ export function painel(page: Page, chave: string): Locator {
 
 // ------------------------------------------------------------------ formulários
 
-export function campo(escopo: Locator, rotulo: string): Locator {
-  return escopo.getByLabel(rotulo, { exact: true });
+/** Campo pelo rótulo — aceita a chave do idioma (ex.: 'cadastros.vendedores.campo_nome') ou o texto. */
+export function campo(escopo: Locator, rotulo: string, idioma: Idioma = 'pt'): Locator {
+  return escopo.getByLabel(textos.texto(rotulo, idioma), { exact: true });
 }
 
 export async function preencher(escopo: Locator, valores: Record<string, string | number>): Promise<void> {
@@ -163,29 +181,45 @@ export async function escolherComRerun(page: Page, escopo: Locator, rotulo: stri
   await selecionarOpcao(page, caixa, texto, (clique) => comRerun(page, clique));
 }
 
-export function botao(escopo: Locator, nome: string): Locator {
-  return escopo.getByRole('button', { name: nome, exact: true });
+export function botao(escopo: Locator, nome: string, idioma: Idioma = 'pt'): Locator {
+  return escopo.getByRole('button', { name: textos.texto(nome, idioma), exact: true });
 }
 
 /** Clica num botão que grava/consulta (dispara rerun) e espera terminar. */
-export async function clicar(page: Page, escopo: Locator, nome: string): Promise<void> {
-  await comRerun(page, () => botao(escopo, nome).click());
+export async function clicar(page: Page, escopo: Locator, nome: string, idioma: Idioma = 'pt'): Promise<void> {
+  await comRerun(page, () => botao(escopo, nome, idioma).click());
 }
 
-export async function esperarToast(page: Page, texto: string | RegExp): Promise<string> {
-  const toast = page.getByTestId('stToast').filter({ hasText: texto }).first();
+/** Chave do idioma vira padrão (marcadores não informados casam com qualquer valor). */
+function comoPadrao(texto: string | RegExp, idioma: Idioma): string | RegExp {
+  return typeof texto === 'string' && textos.ehChave(texto, idioma) ? textos.padrao(texto, {}, idioma) : texto;
+}
+
+/** Espera um toast — aceita chave do idioma (ex.: 'cadastros.vendedores.cadastrado'), texto ou RegExp. */
+export async function esperarToast(page: Page, texto: string | RegExp, idioma: Idioma = 'pt'): Promise<string> {
+  const toast = page.getByTestId('stToast').filter({ hasText: comoPadrao(texto, idioma) }).first();
   await expect(toast).toBeVisible();
   return (await toast.innerText()).trim();
 }
 
-export async function esperarErro(escopo: Locator, texto: string | RegExp): Promise<void> {
-  await expect(escopo.getByTestId('stAlertContentError').filter({ hasText: texto }).first()).toBeVisible();
+/** Espera uma mensagem de erro no escopo — aceita chave do idioma (ex.: 'erros.50001'), texto ou RegExp. */
+export async function esperarErro(escopo: Locator, texto: string | RegExp, idioma: Idioma = 'pt'): Promise<void> {
+  await expect(escopo.getByTestId('stAlertContentError').filter({ hasText: comoPadrao(texto, idioma) }).first())
+    .toBeVisible();
 }
 
-/** Marca "Confirmo que quero excluir..." e clica em "Excluir <entidade>". */
-export async function excluirComConfirmacao(page: Page, escopo: Locator, entidade: string): Promise<void> {
-  await escopo.getByText(`Confirmo que quero excluir este ${entidade}`).click();
-  await clicar(page, escopo, `Excluir ${entidade}`);
+/** Marca a confirmação e clica no botão de excluir da área (ex.: 'cadastros.regioes', 'pedidos.detalhe'). */
+export async function excluirComConfirmacao(page: Page, escopo: Locator, area: string, idioma: Idioma = 'pt'): Promise<void> {
+  await escopo.getByText(textos.t(`${area}.excluir_confirmar`, {}, idioma)).click();
+  await clicar(page, escopo, `${area}.excluir_botao`, idioma);
+}
+
+/** Abre uma aba (st.tabs) pela chave do idioma; só a aba ativa existe no DOM. Devolve o conteúdo dela. */
+export async function abrirAba(page: Page, chave: string, idioma: Idioma = 'pt'): Promise<Locator> {
+  const guia = page.getByRole('tab', { name: textos.texto(chave, idioma), exact: true });
+  await guia.click();
+  await expect(guia).toHaveAttribute('aria-selected', 'true');
+  return page.getByRole('tabpanel');
 }
 
 // ------------------------------------------------------------------ tabelas (st.dataframe)
@@ -235,7 +269,7 @@ export async function celulas(linha: Locator): Promise<string[]> {
 /** Digita na busca do painel e confirma (Enter dispara o rerun que filtra a tabela).
  *  Se a busca já tem esse texto, o Streamlit não roda de novo: só espera ficar ocioso. */
 export async function buscar(page: Page, escopo: Locator, termo: string): Promise<void> {
-  const busca = escopo.getByPlaceholder(/^Buscar/);
+  const busca = escopo.getByTestId('stTextInput').locator('input').first();
   if ((await busca.inputValue()) === termo) {
     await esperarStreamlit(page);
     return;
@@ -260,11 +294,31 @@ export async function selecionarPorBusca(page: Page, escopo: Locator, termo: str
   await expect(linhas.first()).toContainText(termo);
   const grade = escopo.getByTestId('stDataFrame').first();
   await expect(grade).toBeVisible();
-  const caixa = (await grade.boundingBox())!;
-  await comRerun(page, () => page.mouse.click(caixa.x + X_SELECAO, caixa.y + ALTURA_LINHA + ALTURA_LINHA / 2));
+  // a seleção é guardada pelo ID e sobrevive à troca de tela: se já está marcada, clicar desmarcaria
+  if ((await linhas.first().getAttribute('aria-selected')) !== 'true') {
+    const caixa = (await grade.boundingBox())!;
+    await comRerun(page, () => page.mouse.click(caixa.x + X_SELECAO, caixa.y + ALTURA_LINHA + ALTURA_LINHA / 2));
+  }
   await expect(linhas.first()).toHaveAttribute('aria-selected', 'true');
   // confirmação na tela: abriu o formulário de edição ("Editar ...") ou o pedido ("Pedido nº ...")
-  await expect(page.locator('.painel-titulo').filter({ hasText: /^(Editar |Pedido nº )/ })).toBeVisible();
+  await expect(page.locator('.painel-titulo').filter({ hasText: TITULO_ABERTO })).toBeVisible();
+  await esperarStreamlit(page);
+}
+
+/**
+ * Seleciona a linha que contém o texto quando a tabela tem VÁRIAS linhas (sem rolagem):
+ * usa o aria-rowindex da tabela de acessibilidade (1 = cabeçalho) para achar a posição no canvas.
+ */
+export async function selecionarLinha(page: Page, escopo: Locator, texto: string): Promise<void> {
+  const linha = await encontrarLinha(page, escopo, texto);
+  const posicao = Number(await linha.getAttribute('aria-rowindex')) - 2;
+  if ((await linha.getAttribute('aria-selected')) !== 'true') {
+    const caixa = (await escopo.getByTestId('stDataFrame').first().boundingBox())!;
+    await comRerun(page, () =>
+      page.mouse.click(caixa.x + X_SELECAO, caixa.y + ALTURA_LINHA * (posicao + 1) + ALTURA_LINHA / 2));
+  }
+  await expect(linha).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.painel-titulo').filter({ hasText: TITULO_ABERTO })).toBeVisible();
   await esperarStreamlit(page);
 }
 
@@ -299,6 +353,42 @@ export function brl(valor: number): string {
   return 'R$ ' + valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// ------------------------------------------------------------------ tema
+
+/** Escolhe o tema no menu ⋮ do Streamlit (o menu continua aberto depois: fecha com Esc). */
+export async function escolherTema(page: Page, tema: 'System' | 'Light' | 'Dark'): Promise<void> {
+  const menu = page.getByTestId('stMainMenuList');
+  if (!(await menu.isVisible())) await page.getByTestId('stMainMenuButton').click();
+  await page.getByTestId(`stMainMenuItem-theme-${tema}`).click();
+  await page.keyboard.press('Escape');
+  if (tema !== 'System') {
+    await expect(page.locator('html')).toHaveAttribute('data-tema', tema === 'Dark' ? 'escuro' : 'claro');
+  }
+}
+
+/** Cores e contraste (WCAG) de um texto de painel visível (título, aba ou rótulo) e do fundo do painel. */
+export async function coresDoPainel(page: Page): Promise<{ fundo: string; texto: string; contraste: number; navbar: string }> {
+  return page.evaluate(() => {
+    const rgb = (s: string) => (s.match(/[\d.]+/g) || []).map(Number);
+    const lum = ([r, g, b]: number[]) => {
+      const f = (c: number) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    // texto de referência: título do painel; na tela Relatórios (sem título), a aba ou um rótulo
+    const titulo = [...document.querySelectorAll(
+      '[class*="st-key-painel"] :is(.painel-titulo, [role="tab"] p, [data-testid="stWidgetLabel"] p, [data-testid="stMetricLabel"] p)')]
+      .find((e) => e.getBoundingClientRect().height > 0)!;
+    const painel = titulo.closest('[class*="st-key-painel"]')!;
+    const fundo = getComputedStyle(painel).backgroundColor;
+    const texto = getComputedStyle(titulo).color;
+    const a = lum(rgb(fundo)), b = lum(rgb(texto));
+    return {
+      fundo, texto, contraste: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
+      navbar: getComputedStyle(document.querySelector('[data-testid="stHeader"]')!).backgroundColor,
+    };
+  });
+}
+
 // ------------------------------------------------------------------ layout
 
 /** Diferença entre altura do conteúdo e da janela (0 = sem scroll de página). */
@@ -307,5 +397,54 @@ export async function scrollDePagina(page: Page): Promise<{ documento: number; p
     const d = document.scrollingElement!;
     const m = document.querySelector('[data-testid="stMain"]')!;
     return { documento: d.scrollHeight - d.clientHeight, principal: m.scrollHeight - m.clientHeight };
+  });
+}
+
+// ------------------------------------------------------------------ idioma
+
+/** Troca o idioma pelo seletor do canto da navbar (popover "PT"/"EN"). */
+export async function trocarIdioma(page: Page, idioma: Idioma): Promise<void> {
+  await page.locator('.st-key-seletor_idioma button').first().click();
+  const opcao = page.getByRole('radio', { name: textos.t(`idioma.${idioma}`, {}, idioma), exact: true });
+  await expect(opcao).toBeVisible();
+  await comRerun(page, () => opcao.click({ force: true }));
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('stTopNavLink').filter({ hasText: textos.t('nav.pedidos', {}, idioma) }))
+    .toBeVisible();
+}
+
+// ------------------------------------------------------------------ tooltips
+
+/** Passa o mouse no centro do elemento (dois movimentos, como uma pessoa). */
+export async function passarMouse(page: Page, alvo: Locator): Promise<void> {
+  await alvo.scrollIntoViewIfNeeded();
+  const caixa = (await alvo.boundingBox())!;
+  await page.mouse.move(caixa.x + 3, caixa.y + 3);
+  await page.mouse.move(caixa.x + caixa.width / 2, caixa.y + caixa.height / 2, { steps: 3 });
+}
+
+/** Tira o mouse de cima de tudo e espera os balões fecharem. */
+export async function fecharBaloes(page: Page): Promise<void> {
+  await page.mouse.move(2, (page.viewportSize()?.height ?? 700) - 2);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());   // tira o foco (sem esperar)
+  await expect(balaoNativo(page)).toHaveCount(0);
+}
+
+/** Balão nativo do Streamlit (help= de widgets e cabeçalhos de coluna). */
+export function balaoNativo(page: Page): Locator {
+  return page.locator('[data-testid="stTooltipContent"], [data-testid="stDataFrameTooltipContent"]');
+}
+
+/** Balão do nosso tooltip em CSS (componentes/dicas.py), dentro do elemento com a dica. */
+export function balaoCss(alvo: Locator): Locator {
+  return alvo.locator('.dica');
+}
+
+/** Estilo calculado do balão (o que define o "visual" do tooltip). */
+export async function estiloDoBalao(balao: Locator): Promise<Record<string, string>> {
+  return balao.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return { fundo: cs.backgroundColor, cor: cs.color, fonte: cs.fontSize, padding: cs.padding,
+             raio: cs.borderRadius, sombra: cs.boxShadow, larguraMax: cs.maxWidth };
   });
 }

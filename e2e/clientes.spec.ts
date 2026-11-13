@@ -1,4 +1,5 @@
 import { test, expect } from './helpers/fixtures';
+import { padrao, t } from './helpers/textos';
 import { cnpjUnico, cpfUnico, sufixo, unico } from './helpers/db';
 import {
   abrir, buscar, recarregar, clicar, escolher, esperarErro, esperarToast, excluirComConfirmacao,
@@ -19,15 +20,15 @@ test.describe('Clientes', () => {
     const form = painel(page, 'form_clientes');
 
     await preencher(form, {
-      'Nome / razão social *': nome,
-      'CPF/CNPJ * (somente números)': cnpjFormatado,
-      Telefone: '(11) 3000-0000',
-      'E-mail': 'cliente@exemplo.test',
-      'Endereço': 'Rua do Teste, 100',
+      'cadastros.clientes.campo_nome': nome,
+      'cadastros.clientes.campo_cpf': cnpjFormatado,
+      'comum.telefone': '(11) 3000-0000',
+      'comum.email': 'cliente@exemplo.test',
+      'comum.endereco': 'Rua do Teste, 100',
     });
-    await escolher(page, form, 'Região *', cenario.regiao);
-    await clicar(page, form, 'Cadastrar cliente');
-    await esperarToast(page, 'Cliente cadastrado');
+    await escolher(page, form, 'cadastros.clientes.campo_regiao', cenario.regiao);
+    await clicar(page, form, 'cadastros.clientes.botao_cadastrar');
+    await esperarToast(page, 'cadastros.clientes.cadastrado');
 
     expect(await db.cliente(nome)).toMatchObject({ cpf_cnpj: cnpj, fk_regiao: cenario.idRegiao });
     const lista = painel(page, 'lista_clientes');
@@ -56,9 +57,9 @@ test.describe('Clientes', () => {
     const form = painel(page, 'form_clientes');
 
     await selecionarPorBusca(page, lista, cenario.cliente);
-    await preencher(form, { 'Nome / razão social *': novoNome, Telefone: '(11) 98888-7777' });
-    await clicar(page, form, 'Salvar alterações');
-    await esperarToast(page, 'Cliente atualizado');
+    await preencher(form, { 'cadastros.clientes.campo_nome': novoNome, 'comum.telefone': '(11) 98888-7777' });
+    await clicar(page, form, 'comum.salvar_alteracoes');
+    await esperarToast(page, 'cadastros.clientes.atualizado');
 
     expect(await db.cliente(novoNome)).toMatchObject({ telefone: '(11) 98888-7777' });
     await buscar(page, lista, novoNome);
@@ -71,24 +72,24 @@ test.describe('Clientes', () => {
     const form = painel(page, 'form_clientes');
 
     await selecionarPorBusca(page, lista, cenario.cliente);
-    await excluirComConfirmacao(page, form, 'cliente');
-    await esperarToast(page, 'Cliente excluído');
+    await excluirComConfirmacao(page, form, 'cadastros.clientes');
+    await esperarToast(page, 'cadastros.clientes.excluido');
 
     expect(await db.cliente(cenario.cliente)).toBeUndefined();
     await buscar(page, lista, cenario.cliente);
-    await expect(lista.getByText('Nenhum registro encontrado.')).toBeVisible();
+    await expect(lista.getByText(t('comum.nenhum_registro'))).toBeVisible();
   });
 
   test('erro: nome e CPF/CNPJ são obrigatórios', async ({ page, db }) => {
     const form = painel(page, 'form_clientes');
 
-    await clicar(page, form, 'Cadastrar cliente');
-    await esperarErro(form, 'O nome do cliente e obrigatorio.');
+    await clicar(page, form, 'cadastros.clientes.botao_cadastrar');
+    await esperarErro(form, 'erros.50005');
 
     const nome = unico('Cliente');
-    await preencher(form, { 'Nome / razão social *': nome });
-    await clicar(page, form, 'Cadastrar cliente');
-    await esperarErro(form, 'O CPF/CNPJ e obrigatorio.');
+    await preencher(form, { 'cadastros.clientes.campo_nome': nome });
+    await clicar(page, form, 'cadastros.clientes.botao_cadastrar');
+    await esperarErro(form, 'erros.50006');
     expect(await db.cliente(nome)).toBeUndefined();
     // nada gravado com nome em branco (sem comparar totais: outros testes gravam em paralelo)
     expect(await db.consulta("SELECT nome FROM CLIENTE WHERE LTRIM(RTRIM(nome)) = ''")).toEqual([]);
@@ -101,10 +102,10 @@ test.describe('Clientes', () => {
     const nome = unico('Cliente');
     const form = painel(page, 'form_clientes');
 
-    await preencher(form, { 'Nome / razão social *': nome, 'CPF/CNPJ * (somente números)': existente!.cpf_cnpj });
-    await escolher(page, form, 'Região *', cenario.regiao);
-    await clicar(page, form, 'Cadastrar cliente');
-    await esperarErro(form, 'Ja existe um cliente com este CPF/CNPJ.');
+    await preencher(form, { 'cadastros.clientes.campo_nome': nome, 'cadastros.clientes.campo_cpf': existente!.cpf_cnpj });
+    await escolher(page, form, 'cadastros.clientes.campo_regiao', cenario.regiao);
+    await clicar(page, form, 'cadastros.clientes.botao_cadastrar');
+    await esperarErro(form, 'erros.cpf_duplicado');
     expect(await db.cliente(nome)).toBeUndefined();
   });
 
@@ -116,9 +117,9 @@ test.describe('Clientes', () => {
     const form = painel(page, 'form_clientes');
 
     await selecionarPorBusca(page, lista, `${cenario.cliente} Outro`);
-    await preencher(form, { 'CPF/CNPJ * (somente números)': (await db.cliente(cenario.cliente))!.cpf_cnpj });
-    await clicar(page, form, 'Salvar alterações');
-    await esperarErro(form, 'Ja existe outro cliente com este CPF/CNPJ.');
+    await preencher(form, { 'cadastros.clientes.campo_cpf': (await db.cliente(cenario.cliente))!.cpf_cnpj });
+    await clicar(page, form, 'comum.salvar_alteracoes');
+    await esperarErro(form, 'erros.50028');
     expect(await db.cliente(`${cenario.cliente} Outro`)).toMatchObject({ cpf_cnpj: outroCpf });
   });
 
@@ -130,8 +131,8 @@ test.describe('Clientes', () => {
     const form = painel(page, 'form_clientes');
 
     await selecionarPorBusca(page, lista, cenario.cliente);
-    await excluirComConfirmacao(page, form, 'cliente');
-    await esperarErro(form, 'Nao e possivel excluir: o cliente possui 1 pedido(s)');
+    await excluirComConfirmacao(page, form, 'cadastros.clientes');
+    await esperarErro(form, t('erros.50026', { qtd: 1 }));
     expect(await db.cliente(cenario.cliente)).toBeDefined();
   });
 });

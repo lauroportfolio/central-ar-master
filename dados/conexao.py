@@ -45,7 +45,8 @@ def _string_conexao() -> str:
     if modo == "docker":
         senha = config.senha_banco()
         if not senha or senha == "troque_aqui":
-            raise ErroBanco("Defina a senha do usuario sa em DB_PASSWORD no arquivo .env.")
+            raise ErroBanco("Defina a senha do usuario sa em DB_PASSWORD no arquivo .env.",
+                            chave="erros.senha_docker")
         return (
             "DRIVER={ODBC Driver 18 for SQL Server};"
             "SERVER=localhost,1433;UID=sa;"
@@ -54,11 +55,13 @@ def _string_conexao() -> str:
             "TrustServerCertificate=yes;"
         )
 
-    raise ErroBanco(f"DB_MODE invalido no .env: '{modo}'. Use 'localdb' ou 'docker'.")
+    raise ErroBanco(f"DB_MODE invalido no .env: '{modo}'. Use 'localdb' ou 'docker'.",
+                    chave="erros.db_mode_invalido", parametros={"modo": modo})
 
 
-def _mensagem_legivel(erro: pyodbc.Error) -> str:
-    """Tira os prefixos do driver e devolve só a mensagem do SQL Server."""
+def _erro_banco(erro: pyodbc.Error) -> ErroBanco:
+    """Converte o erro do driver em ErroBanco: texto do SQL Server sem os prefixos do driver,
+    número do THROW (50001...) quando houver, e uma chave de tradução para os casos especiais."""
     estado = erro.args[0] if erro.args else ""
     texto = erro.args[1] if len(erro.args) > 1 else str(erro)
 
@@ -72,22 +75,27 @@ def _mensagem_legivel(erro: pyodbc.Error) -> str:
         if parte and parte not in mensagens:
             mensagens.append(parte)
     mensagem = " ".join(mensagens) or texto
+    throw = re.search(r"\((50\d{3})\)", texto)                          # erros do app: 50001...
+    codigo = int(throw.group(1)) if throw else None
 
     if estado == "IM002" or "Data source name not found" in texto or "Can't open lib" in texto:
-        return ("Driver ODBC nao encontrado. Instale o 'ODBC Driver 18 for SQL Server' "
-                "(veja o README).")
+        return ErroBanco("Driver ODBC nao encontrado. Instale o 'ODBC Driver 18 for SQL Server' "
+                         "(veja o README).", chave="erros.driver_odbc")
     if "Could not find stored procedure" in texto:
-        return (f"{mensagem} — rode os scripts sql/01_complemento.sql e sql/02_seed.sql "
-                "no banco (veja o README).")
+        return ErroBanco(f"{mensagem} — rode os scripts sql/01_complemento.sql e sql/02_seed.sql "
+                         "no banco (veja o README).", chave="erros.procedure_ausente",
+                         parametros={"mensagem": mensagem})
     if "Cannot open database" in texto:
-        return (f"Banco '{config.nome_banco()}' nao encontrado. Confira DB_NAME no arquivo .env "
-                "e se o script sql/00_schema_reconstruido.sql foi executado.")
+        return ErroBanco(f"Banco '{config.nome_banco()}' nao encontrado. Confira DB_NAME no arquivo .env "
+                         "e se o script sql/00_schema_reconstruido.sql foi executado.",
+                         chave="erros.banco_ausente", parametros={"banco": config.nome_banco()})
     if estado in ("08001", "HYT00") or "Login timeout" in texto or "network-related" in texto:
-        return ("Nao foi possivel conectar ao SQL Server. Confira se o servidor esta ligado "
-                f"e o DB_MODE do .env (atual: '{config.modo_conexao()}').")
+        return ErroBanco("Nao foi possivel conectar ao SQL Server. Confira se o servidor esta ligado "
+                         f"e o DB_MODE do .env (atual: '{config.modo_conexao()}').",
+                         chave="erros.sem_conexao", parametros={"modo": config.modo_conexao()})
     if "UQ_CLIENTE_CPF_CNPJ" in texto:
-        return "Ja existe um cliente com este CPF/CNPJ."
-    return mensagem
+        return ErroBanco("Ja existe um cliente com este CPF/CNPJ.", chave="erros.cpf_duplicado")
+    return ErroBanco(mensagem, codigo=codigo)
 
 
 @contextmanager
@@ -95,12 +103,12 @@ def _cursor():
     try:
         conexao = pyodbc.connect(_string_conexao(), autocommit=True, timeout=10)
     except pyodbc.Error as erro:
-        raise ErroBanco(_mensagem_legivel(erro)) from erro
+        raise _erro_banco(erro) from erro
     cursor = conexao.cursor()
     try:
         yield cursor
     except pyodbc.Error as erro:
-        raise ErroBanco(_mensagem_legivel(erro)) from erro
+        raise _erro_banco(erro) from erro
     finally:
         cursor.close()
         conexao.close()

@@ -7,19 +7,55 @@
    e o scroll fica dentro do painel.
    Seletores usados: data-testid do Streamlit e as classes st-key-* geradas
    pelos keys dos nossos containers (não dependem das classes internas).
+
+   Temas: as cores ficam em variáveis. O Streamlit troca o tema no navegador sem
+   rodar o script de novo, então um script mínimo (componentes/tema.py) marca
+   o atributo data-tema="claro|escuro" no elemento html, a partir do fundo aplicado.
    ========================================================================= */
 
+/* ------------------------------------------------------------ Tema claro */
 :root {
     --altura-navbar: 3.5rem;
-    --azul-escuro: #0F1F3D;
+    --azul-escuro: #0F1F3D;          /* navbar (igual nos dois temas) */
     --azul-claro: #7CB8FF;
     --destaque: #1E6FD9;
-    --borda: #DDE2EA;
-    --texto: #1B2333;
-    --texto-suave: #5B6576;
     --verde: #1F9D55;
     --amarelo: #D69E00;
     --vermelho: #D93636;
+
+    --painel-fundo: #FFFFFF;
+    --ficha-fundo: #F8FAFC;
+    --borda: #DDE2EA;
+    --texto: #1B2333;
+    --texto-suave: #5B6576;
+    --titulo: #0F1F3D;
+    --destaque-texto: #1E6FD9;        /* texto em azul de destaque (contraste mínimo 4.5) */
+}
+
+/* ----------------------------------------------------------- Tema escuro */
+html[data-tema="escuro"] {
+    --verde: #34C77B;
+    --amarelo: #E8B730;
+    --vermelho: #F06464;
+
+    --painel-fundo: #111A28;
+    --ficha-fundo: #0D1522;
+    --borda: #2A3446;
+    --texto: #E5E9F0;
+    --texto-suave: #9AA5B8;
+    --titulo: #E8EEF8;
+    --destaque-texto: #7CB8FF;        /* o #1E6FD9 sobre o grafite dava contraste 3.6 */
+}
+
+/* Container invisível com o script que marca o tema: fora do fluxo e fora da tela.
+   (display:none não serve: o Streamlit não injeta o conteúdo de um st.html escondido assim) */
+[data-testid="stLayoutWrapper"]:has(> .st-key-infra) {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
 }
 
 /* ---------------------------------------------------------------- Navbar */
@@ -72,7 +108,7 @@ body:has(.marca-cadastros) [data-testid="stTopNavSection"] p {
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {
     flex: 1 1 auto;
     min-height: 0;
-    gap: 12px;                                                     /* faixa de status <-> painéis */
+    gap: 12px;                                                     /* entre a faixa de status e os painéis */
 }
 
 /* Cadeia de altura: quem contém um painel estica até o fim da janela */
@@ -90,10 +126,10 @@ body:has(.marca-cadastros) [data-testid="stTopNavSection"] p {
     min-height: 0;
 }
 
-/* Painéis: cartão branco, scroll interno */
+/* Painéis: cartão (branco no claro, grafite no escuro), scroll interno */
 [class*="st-key-painel"] {
     overflow-y: auto;
-    background: #FFFFFF;
+    background: var(--painel-fundo);
 }
 /* Painel que só tem uma tabela: quem rola é a própria tabela (evita barra dupla) */
 [class*="st-key-painel"]:has(> [data-testid="stElementContainer"]:only-child [data-testid="stDataFrame"]) {
@@ -103,7 +139,7 @@ body:has(.marca-cadastros) [data-testid="stTopNavSection"] p {
 .painel-titulo {
     font-weight: 700;
     font-size: 1.05rem;
-    color: var(--azul-escuro);
+    color: var(--titulo);
     line-height: 1.6;
 }
 .painel-subtitulo {
@@ -198,7 +234,7 @@ body:has(.marca-cadastros) [data-testid="stTopNavSection"] p {
 }
 .total-destaque strong {
     font-size: 1.9rem;
-    color: var(--destaque);
+    color: var(--destaque-texto);
     white-space: nowrap;
 }
 .ficha {
@@ -208,7 +244,7 @@ body:has(.marca-cadastros) [data-testid="stTopNavSection"] p {
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--borda);
     border-radius: 0.5rem;
-    background: #F8FAFC;
+    background: var(--ficha-fundo);
 }
 .ficha span {
     display: block;
@@ -222,4 +258,145 @@ body:has(.marca-cadastros) [data-testid="stTopNavSection"] p {
 /* -------------------------------------------------------- KPIs compactos */
 [data-testid="stMetric"] {
     padding: 0.4rem 0.8rem;
+}
+
+/* ------------------------------------------- Gráficos (Altair/Vega) nos dois temas */
+/* rótulos e títulos dos eixos: o cinza padrão ficava com contraste 3.4 no fundo do painel */
+:is([data-testid="stVegaLiteChart"], [data-testid="stArrowVegaLiteChart"]) :is(.role-axis-label, .role-axis-title) text {
+    fill: var(--texto-suave);
+}
+
+/* Aba ativa: o Streamlit pinta o texto com a cor primária; no escuro, usa o azul claro */
+html[data-tema="escuro"] [role="tab"][aria-selected="true"] p {
+    color: var(--destaque-texto);
+}
+
+/* ------------------------------------ Seletor de idioma: na navbar, ao lado do menu ⋮ */
+/* (o container fica no corpo da página; aqui ele sai do fluxo e vai para o canto da navbar) */
+[data-testid="stLayoutWrapper"]:has(> .st-key-seletor_idioma) {
+    position: fixed;
+    top: 12px;                 /* botão de 28px centralizado com o menu ⋮ (centro a 26px do topo) */
+    right: 3.4rem;
+    z-index: 999991;
+    width: auto;
+}
+.st-key-seletor_idioma button {
+    min-height: 2rem;
+    padding: 0 0.6rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.st-key-seletor_idioma button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.45);
+}
+.st-key-seletor_idioma button p,
+.st-key-seletor_idioma button [data-testid="stIconMaterial"],
+.st-key-seletor_idioma button svg {
+    color: #E6ECF5;
+}
+
+/* =========================================================================
+   Tooltips no visual do shadcn/ui — o MESMO estilo para:
+   - os balões nativos do Streamlit (help= de widgets e cabeçalhos de coluna):
+     stTooltipContent e stDataFrameTooltipContent;
+   - os nossos (componentes/dicas.py): .dica, em CSS puro, abre no hover e no foco.
+   ========================================================================= */
+:root {
+    --dica-fundo: #0F172A;
+    --dica-texto: #F8FAFC;
+}
+html[data-tema="escuro"] {
+    --dica-fundo: #F8FAFC;
+    --dica-texto: #0F172A;
+}
+
+@keyframes dica-entrada {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+:is([data-testid="stTooltipContent"], [data-testid="stDataFrameTooltipContent"], .dica) {
+    background: var(--dica-fundo) !important;
+    color: var(--dica-texto) !important;
+    font-size: 12px !important;
+    font-weight: 400;
+    line-height: 1.45 !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18) !important;
+    max-width: 260px !important;
+    width: max-content;
+    text-align: left;
+    white-space: normal;
+}
+/* o texto dentro do balão nativo herda o estilo do balão */
+:is([data-testid="stTooltipContent"], [data-testid="stDataFrameTooltipContent"]) :is(p, div, span) {
+    color: inherit !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    margin: 0 !important;
+}
+/* balões nativos: entram com fade + zoom (de 95% a 100%) depois de um pequeno atraso */
+:is([data-testid="stTooltipContent"], [data-testid="stDataFrameTooltipContent"]) {
+    animation: dica-entrada 150ms ease-out 150ms both;
+}
+
+/* ---------------------------------------------- tooltip em CSS puro (.dica) */
+.com-dica {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: inherit;
+    cursor: help;
+    outline: none;
+    border-radius: 4px;
+}
+.com-dica:focus-visible {
+    box-shadow: 0 0 0 2px var(--destaque);
+}
+.com-dica > .dica {
+    position: absolute;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    --dica-x: -50%;
+    transform: translateX(var(--dica-x)) scale(0.95);
+    transform-origin: top center;
+    transition: opacity 150ms ease-out, transform 150ms ease-out, visibility 0s linear 150ms;
+}
+.dica-baixo > .dica { top: calc(100% + 4px); }
+.dica-cima  > .dica { bottom: calc(100% + 4px); transform-origin: bottom center; }
+.dica-centro > .dica { left: 50%; }
+.dica-inicio > .dica { left: 0;  --dica-x: 0; transform-origin: top left; }
+.dica-fim    > .dica { right: 0; left: auto; --dica-x: 0; transform-origin: top right; }
+.com-dica:is(:hover, :focus-visible, :focus-within) > .dica {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(var(--dica-x)) scale(1);
+    transition: opacity 150ms ease-out 150ms, transform 150ms ease-out 150ms, visibility 0s linear 150ms;
+}
+
+/* faixa de status e cards: o tooltip fica por cima dos painéis */
+.faixa-status .com-dica {
+    z-index: 5;
+}
+/* o item "Banco ..." continua no canto direito da faixa (o invólucro do tooltip é que é flexível) */
+.faixa-status > .com-dica:has(> .banco) {
+    margin-left: auto;
+}
+/* bloco inteiro com tooltip (ex.: cada card de "Últimos pedidos") */
+.com-dica.bloco {
+    display: block;
+    width: 100%;
+}
+.linha-dica {
+    font-size: 0.82rem;
+    color: var(--texto-suave);
+    margin-bottom: 0.15rem;
+}
+.icone-dica {
+    color: var(--destaque-texto);
+    font-weight: 700;
 }

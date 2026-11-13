@@ -5,6 +5,7 @@ from html import escape
 import streamlit as st
 
 from componentes.acoes import carregar
+from componentes.dicas import ajuda, com_dica
 from componentes.grafico import grafico_barras
 from componentes.layout import painel, titulo_html
 from dados import clientes as dados_clientes
@@ -12,7 +13,10 @@ from dados import pedidos as dados_pedidos
 from dados import produtos as dados_produtos
 from dados import relatorios as dados_relatorios
 from dados import vendedores as dados_vendedores
-from util.formatacao import brl, data_hora
+from util.formatacao import brl, data_hora, pct
+from util.i18n import t
+
+KPI = "inicio.kpi"
 
 
 def render() -> None:
@@ -28,32 +32,35 @@ def render() -> None:
 
     principal, lateral = st.columns([7, 3])
 
-    with principal, painel("inicio", "Visão geral"):
+    with principal, painel("inicio", t("inicio.visao_geral")):
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Total vendido", brl(total), border=True)
-        c2.metric("Pedidos", len(pedidos), border=True)
-        c3.metric("Ticket médio", brl(ticket), border=True)
-        c4.metric("Comissões", brl(comissoes), border=True)
+        c1.metric(t(f"{KPI}.total_vendido"), brl(total), border=True, help=ajuda("tooltips.kpi.total_vendido"))
+        c2.metric(t(f"{KPI}.pedidos"), len(pedidos), border=True, help=ajuda("tooltips.kpi.pedidos"))
+        c3.metric(t(f"{KPI}.ticket_medio"), brl(ticket), border=True, help=ajuda("tooltips.kpi.ticket_medio"))
+        c4.metric(t(f"{KPI}.comissoes"), brl(comissoes), border=True, help=ajuda("tooltips.kpi.comissoes"))
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Vendedores", len(vendedores), border=True)
-        c2.metric("Regiões", len(regioes), border=True)
-        c3.metric("Clientes", len(clientes), border=True)
-        c4.metric("Produtos", len(produtos), border=True)
-        st.html(titulo_html("Vendas por região"))
+        c1.metric(t(f"{KPI}.vendedores"), len(vendedores), border=True, help=ajuda("tooltips.kpi.vendedores"))
+        c2.metric(t(f"{KPI}.regioes"), len(regioes), border=True, help=ajuda("tooltips.kpi.regioes"))
+        c3.metric(t(f"{KPI}.clientes"), len(clientes), border=True, help=ajuda("tooltips.kpi.clientes"))
+        c4.metric(t(f"{KPI}.produtos"), len(produtos), border=True, help=ajuda("tooltips.kpi.produtos"))
+        st.html(titulo_html(t("inicio.vendas_por_regiao")))
         if regioes.empty or regioes["total_vendido"].sum() == 0:
-            st.info("Ainda não há vendas.")
+            st.info(t("inicio.sem_vendas"))
         else:
-            grafico_barras(regioes, "regiao", "total_vendido", "Região", preencher=True)
+            grafico_barras(regioes, "regiao", "total_vendido", t("comum.regiao"), preencher=True)
 
-    with lateral, painel("ultimos", "Últimos pedidos"):
+    with lateral, painel("ultimos", t("inicio.ultimos_pedidos")):
         if pedidos.empty:
-            st.info("Nenhum pedido cadastrado.")
+            st.info(t("inicio.sem_pedidos"))
         else:
             itens = "".join(
-                f'<div class="item-pedido">'
-                f'<div class="cliente">Nº {r.id_pedido} · {escape(str(r.cliente))}</div>'
-                f'<div class="total">{brl(r.total_pedido)}</div>'
-                f'<div class="detalhe">{data_hora(r.data_pedido)} · {escape(str(r.vendedor))}</div>'
-                f'</div>'
+                com_dica(
+                    f'<div class="item-pedido">'
+                    f'<div class="cliente">{escape(t("inicio.item_titulo", id=r.id_pedido, cliente=r.cliente))}</div>'
+                    f'<div class="total">{brl(r.total_pedido)}</div>'
+                    f'<div class="detalhe">{escape(t("inicio.item_detalhe", data=data_hora(r.data_pedido), vendedor=r.vendedor))}</div>'
+                    f'</div>',
+                    "tooltips.ultimo_pedido", bloco=True, vendedor=r.vendedor,
+                    comissao=brl(r.valor_comissao), percentual=pct(r.percentual_comissao))
                 for r in pedidos.itertuples())
             st.html(f'<div class="lista-pedidos">{itens}</div>')
