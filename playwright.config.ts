@@ -11,7 +11,7 @@ import { BANCO_E2E, PORTA_APP, senhaSa } from './e2e/helpers/env';
 export default defineConfig({
   testDir: './e2e',
   globalSetup: './e2e/global-setup.ts',
-  timeout: 120_000,
+  timeout: Number(process.env.SLOW_MO ?? 0) > 0 ? 600_000 : 120_000,   // SLOW_MO deixa cada passo mais lento
   expect: { timeout: 15_000 },
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
@@ -24,7 +24,9 @@ export default defineConfig({
     launchOptions: { slowMo: Number(process.env.SLOW_MO ?? 0) },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: process.env.VIDEO === '1'
+      ? { mode: 'on', size: { width: 1366, height: 768 } }
+      : 'retain-on-failure',
     actionTimeout: 15_000,
   },
 
