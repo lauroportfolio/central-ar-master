@@ -10,9 +10,10 @@ import streamlit as st
 
 from componentes.acoes import avisar, carregar, executar, mensagem_de_erro
 from componentes.cadastro import form_excluir
-from componentes.dicas import ajuda, com_dica
+from componentes.dicas import ajuda, com_dica, texto_cortado
 from componentes.layout import painel, titulo_html
-from componentes.tabela import filtrar, limpar_selecao, tabela, tabela_selecionavel
+from componentes.tabela import (ESPACO_LISTA_PEDIDOS, ESPACO_PEDIDO, filtrar, larguras_editor, limpar_selecao,
+                                tabela, tabela_selecionavel)
 from dados import clientes as dados_clientes
 from dados import pedidos as dados_pedidos
 from dados import produtos as dados_produtos
@@ -43,7 +44,7 @@ def render() -> None:
                                         {"id_pedido": t("pedidos.col_numero"), "data_pedido": t("comum.data"),
                                          "cliente": t("comum.cliente"), "total_pedido": t("comum.total")},
                                         "id_pedido", moeda=("total_pedido",), datas_curtas=("data_pedido",),
-                                        larguras={"id_pedido": 48},
+                                        espaco=ESPACO_LISTA_PEDIDOS,
                                         ajudas={"total_pedido": ajuda("tooltips.pedido.total")})
 
     with direita:
@@ -103,30 +104,39 @@ def _corpo_novo_pedido(clientes: pd.DataFrame, produtos: pd.DataFrame) -> float:
 
     st.markdown(t(f"{NOVO}.itens_titulo"))
     prod = produtos.set_index("id_produto")
-    # A lista de produtos do editor fica "congelada" a partir do 1º item digitado.
-    # Motivo: o st.data_editor com linhas dinâmicas é identificado também pelas opções das
-    # colunas; se alguém cadastrar um produto enquanto o pedido é montado, a lista mudaria
-    # e o Streamlit apagaria os itens já digitados. Com o editor vazio a lista é sempre a atual.
+    # A lista de produtos e as larguras das colunas do editor ficam "congeladas" a partir do
+    # 1º item digitado. Motivo: o st.data_editor com linhas dinâmicas é identificado também
+    # pelas opções das colunas; se alguém cadastrar um produto (ou a janela mudar de tamanho)
+    # enquanto o pedido é montado, as opções mudariam e o Streamlit apagaria os itens já
+    # digitados. Com o editor vazio, a lista e as larguras são sempre as atuais.
     chave_editor = f"novo_itens_{versao}"
     chave_opcoes = f"_opcoes_produtos_{versao}"
+    chave_larguras = f"_larguras_itens_{versao}"
+    rotulos_colunas = {"produto": t("comum.produto"), "quantidade": t("comum.quantidade"),
+                       "preco_unitario": t(f"{NOVO}.col_preco_unitario"), "desconto": t(f"{NOVO}.col_desconto")}
     editor_vazio = not (st.session_state.get(chave_editor) or {}).get("added_rows")
     if editor_vazio or chave_opcoes not in st.session_state:
         st.session_state[chave_opcoes] = {f"{i} — {prod.loc[i, 'descricao']}": int(i) for i in prod.index}
+        st.session_state[chave_larguras] = larguras_editor(rotulos_colunas, "produto", ESPACO_PEDIDO,
+                                                           ajudas=("preco_unitario",))
     rotulos = st.session_state[chave_opcoes]
+    largura = st.session_state[chave_larguras]
     itens = st.data_editor(
         pd.DataFrame({"produto": pd.Series(dtype="object"), "quantidade": pd.Series(dtype="float"),
                       "preco_unitario": pd.Series(dtype="float"), "desconto": pd.Series(dtype="float")}),
         num_rows="dynamic", width="stretch", key=chave_editor,
         column_config={
-            "produto": st.column_config.SelectboxColumn(t("comum.produto"), options=list(rotulos),
-                                                        required=True, width="large"),
-            "quantidade": st.column_config.NumberColumn(t("comum.quantidade"), min_value=0.001,
-                                                        step=0.001, default=1.0, required=True),
+            "produto": st.column_config.SelectboxColumn(rotulos_colunas["produto"], options=list(rotulos),
+                                                        required=True, width=largura["produto"]),
+            "quantidade": st.column_config.NumberColumn(rotulos_colunas["quantidade"], min_value=0.001,
+                                                        step=0.001, default=1.0, required=True,
+                                                        width=largura["quantidade"]),
             "preco_unitario": st.column_config.NumberColumn(
-                t(f"{NOVO}.col_preco_unitario"), min_value=0.0, step=0.01, format="%.2f",
-                help=ajuda("tooltips.pedido.preco_unitario")),
-            "desconto": st.column_config.NumberColumn(t(f"{NOVO}.col_desconto"), min_value=0.0,
-                                                      max_value=100.0, step=0.5, default=0.0, format="%.2f"),
+                rotulos_colunas["preco_unitario"], min_value=0.0, step=0.01, format="%.2f",
+                help=ajuda("tooltips.pedido.preco_unitario"), width=largura["preco_unitario"]),
+            "desconto": st.column_config.NumberColumn(rotulos_colunas["desconto"], min_value=0.0,
+                                                      max_value=100.0, step=0.5, default=0.0, format="%.2f",
+                                                      width=largura["desconto"]),
         },
     )
 
@@ -156,7 +166,8 @@ def _corpo_novo_pedido(clientes: pd.DataFrame, produtos: pd.DataFrame) -> float:
                         "preco": t("comum.preco_unit"), "desconto": t("comum.desconto"),
                         "valor": t("comum.subtotal"), "estoque": t(f"{NOVO}.col_estoque_atual")},
                moeda=("preco", "valor"), percentual=("desconto",), quantidade=("quantidade", "estoque"),
-               altura="auto", ajudas={"estoque": ajuda("tooltips.pedido.estoque_atual"),
+               altura="auto", espaco=ESPACO_PEDIDO,
+               ajudas={"estoque": ajuda("tooltips.pedido.estoque_atual"),
                                       "valor": ajuda("tooltips.pedido.subtotal")})
 
     c1, c2 = st.columns([3, 2], vertical_alignment="center")
@@ -195,9 +206,9 @@ def _detalhe_pedido(sel: int, pedidos: pd.DataFrame, clientes: pd.DataFrame,
         with st.container(key="painel_pedido_corpo", height="stretch"):
             st.html(
                 '<div class="ficha">'
-                f'<div><span>{escape(t(f"{DETALHE}.ficha_cliente"))}</span><b>{escape(str(p["cliente"]))}</b></div>'
-                f'<div><span>{escape(t(f"{DETALHE}.ficha_vendedor"))}</span><b>{escape(str(p["vendedor"]))}</b></div>'
-                f'<div><span>{escape(t(f"{DETALHE}.ficha_regiao"))}</span><b>{escape(str(p["regiao"]))}</b></div>'
+                f'<div><span>{escape(t(f"{DETALHE}.ficha_cliente"))}</span><b>{texto_cortado(str(p["cliente"]))}</b></div>'
+                f'<div><span>{escape(t(f"{DETALHE}.ficha_vendedor"))}</span><b>{texto_cortado(str(p["vendedor"]))}</b></div>'
+                f'<div><span>{escape(t(f"{DETALHE}.ficha_regiao"))}</span><b>{texto_cortado(str(p["regiao"]))}</b></div>'
                 + com_dica(f'<div><span>{escape(t(f"{DETALHE}.ficha_comissao"))}</span><b>{pct(p["percentual_comissao"])} · '
                            f'{brl(p["valor_comissao"])}</b></div>', "tooltips.pedido.comissao_valor", alinhamento="fim") +
                 '</div>')
@@ -214,7 +225,7 @@ def _detalhe_pedido(sel: int, pedidos: pd.DataFrame, clientes: pd.DataFrame,
                                "preco_unitario": t("comum.preco_unit"), "desconto": t("comum.desconto"),
                                "valor_total": t("comum.subtotal")},
                        moeda=("preco_unitario", "valor_total"), percentual=("desconto",),
-                       quantidade=("quantidade",), altura="auto",
+                       quantidade=("quantidade",), altura="auto", espaco=ESPACO_PEDIDO,
                        ajudas={"valor_total": ajuda("tooltips.pedido.subtotal")})
                 if not itens.empty:
                     it = itens.set_index("id_produto")

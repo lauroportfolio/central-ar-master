@@ -16,7 +16,8 @@ import streamlit as st
 
 import config
 from componentes.acoes import mostrar_aviso
-from componentes.dicas import ajuda
+from componentes.dicas import OBSERVADOR_CORTE, ajuda
+from componentes.janela import medir_janela
 from componentes.idioma import inicializar_idioma, seletor_idioma
 from componentes.status import faixa_sem_conexao, faixa_status
 from componentes.tema import marcar_tema
@@ -57,8 +58,14 @@ PAGINAS = {
 }
 navegacao = st.navigation(PAGINAS, position="top")
 
-# caminhos das páginas (o tema escolhido no menu ⋮ vale para todas, inclusive após F5)
-marcar_tema(["/"] + [f"/{p.url_path}" for paginas in PAGINAS.values() for p in paginas])
+# Scripts do navegador, num container fora da tela:
+# - tema: os caminhos das páginas (o tema escolhido no menu ⋮ vale para todas, inclusive após F5);
+# - textos cortados com "…": o tooltip com o texto completo só aparece quando está cortado;
+# - largura da janela: as tabelas dividem o espaço das colunas conforme a tela.
+with st.container(key="infra"):
+    marcar_tema(["/"] + [f"/{p.url_path}" for paginas in PAGINAS.values() for p in paginas])
+    st.html(OBSERVADOR_CORTE, unsafe_allow_javascript=True)
+    medir_janela()
 seletor_idioma(ajuda=ajuda("tooltips.idioma"))
 
 try:

@@ -7,7 +7,7 @@ import streamlit as st
 
 from componentes.acoes import executar
 from componentes.layout import painel, titulo_html
-from componentes.tabela import filtrar, limpar_selecao, tabela_selecionavel
+from componentes.tabela import ESPACO_CADASTRO, filtrar, limpar_selecao, tabela_selecionavel
 from util.i18n import t
 
 
@@ -23,7 +23,7 @@ def lista_com_busca(chave: str, titulo: str, df: pd.DataFrame, colunas: dict[str
         termo = c2.text_input(t("comum.buscar"), placeholder=t("comum.buscar_placeholder"),
                               label_visibility="collapsed", key=f"busca_{chave}", icon=":material/search:")
         visivel = filtrar(df, termo).reset_index(drop=True)
-        id_sel = tabela_selecionavel(chave, visivel, colunas, coluna_id, **formatos)
+        id_sel = tabela_selecionavel(chave, visivel, colunas, coluna_id, espaco=ESPACO_CADASTRO, **formatos)
     return None if id_sel is None else visivel[visivel[coluna_id] == id_sel].iloc[0]
 
 

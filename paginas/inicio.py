@@ -1,11 +1,9 @@
 """Tela Início: indicadores, vendas por região e últimos pedidos."""
 
-from html import escape
-
 import streamlit as st
 
 from componentes.acoes import carregar
-from componentes.dicas import ajuda, com_dica
+from componentes.dicas import ajuda, com_dica, texto_cortado
 from componentes.grafico import grafico_barras
 from componentes.layout import painel, titulo_html
 from dados import clientes as dados_clientes
@@ -56,9 +54,9 @@ def render() -> None:
             itens = "".join(
                 com_dica(
                     f'<div class="item-pedido">'
-                    f'<div class="cliente">{escape(t("inicio.item_titulo", id=r.id_pedido, cliente=r.cliente))}</div>'
+                    f'<div class="cliente">{texto_cortado(t("inicio.item_titulo", id=r.id_pedido, cliente=r.cliente))}</div>'
                     f'<div class="total">{brl(r.total_pedido)}</div>'
-                    f'<div class="detalhe">{escape(t("inicio.item_detalhe", data=data_hora(r.data_pedido), vendedor=r.vendedor))}</div>'
+                    f'<div class="detalhe">{texto_cortado(t("inicio.item_detalhe", data=data_hora(r.data_pedido), vendedor=r.vendedor))}</div>'
                     f'</div>',
                     "tooltips.ultimo_pedido", bloco=True, vendedor=r.vendedor,
                     comissao=brl(r.valor_comissao), percentual=pct(r.percentual_comissao))

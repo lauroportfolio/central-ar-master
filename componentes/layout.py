@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from html import escape
-
 import streamlit as st
+
+from componentes.dicas import texto_cortado
 
 
 def titulo_html(titulo: str, subtitulo: str | None = None) -> str:
-    html = f'<div class="painel-titulo">{escape(titulo)}</div>'
+    """Título (e subtítulo) de painel em uma linha; se não couber, "…" e o texto completo no tooltip."""
+    html = f'<div class="painel-titulo">{texto_cortado(titulo)}</div>'
     if subtitulo:
-        html += f'<div class="painel-subtitulo">{escape(subtitulo)}</div>'
+        html += f'<div class="painel-subtitulo">{texto_cortado(subtitulo)}</div>'
     return html
 
 

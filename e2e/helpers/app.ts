@@ -49,8 +49,17 @@ const LIMITE_EXECUCAO = 60_000;
 export async function esperarStreamlit(page: Page): Promise<void> {
   const app = page.getByTestId('stApp');
   await expect(app).toHaveAttribute('data-test-connection-state', 'CONNECTED', { timeout: LIMITE_EXECUCAO });
+  // O medidor de largura (componentes/janela.py) roda o script de novo logo depois que a
+  // página carrega: espera a execução que já usou a largura desta janela.
+  await expect(page.locator('#largura-janela')).toHaveAttribute('data-largura', String(larguraEsperada(page)),
+    { timeout: LIMITE_EXECUCAO });
   await expect(app).toHaveAttribute('data-test-script-state', 'notRunning', { timeout: LIMITE_EXECUCAO });
   await expect(page.locator('[data-stale="true"]')).toHaveCount(0, { timeout: LIMITE_EXECUCAO });
+}
+
+/** Largura da janela como o app a recebe: arredondada para baixo em degraus de 32 px. */
+export function larguraEsperada(page: Page): number {
+  return Math.floor(page.viewportSize()!.width / 32) * 32;
 }
 
 // Tráfego do WebSocket do Streamlit, por página (ver monitorarStreamlit).

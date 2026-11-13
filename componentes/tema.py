@@ -4,7 +4,7 @@ Por que um script: o Streamlit troca o tema pelo menu ⋮ só no navegador, sem 
 script Python de novo (st.context.theme não muda até o próximo rerun). Então quem
 acompanha a troca é este observador: ele lê a cor de fundo que o Streamlit aplicou e
 marca <html data-tema="claro|escuro">; o ui/estilo.css troca as variáveis de cor
-a partir desse atributo. O container "infra" é escondido pelo CSS (não ocupa espaço).
+a partir desse atributo. O container "infra" (app.py) é escondido pelo CSS (não ocupa espaço).
 """
 
 import json
@@ -58,6 +58,6 @@ _SCRIPT = """<script>
 
 
 def marcar_tema(caminhos: list[str]) -> None:
-    """Instala o marcador de tema. `caminhos`: URLs das páginas (ex.: ["/", "/pedidos"])."""
-    with st.container(key="infra"):
-        st.html(_SCRIPT.replace("__CAMINHOS__", json.dumps(caminhos)), unsafe_allow_javascript=True)
+    """Instala o marcador de tema. `caminhos`: URLs das páginas (ex.: ["/", "/pedidos"]).
+    Chame dentro do container "infra" (app.py), que fica fora da tela."""
+    st.html(_SCRIPT.replace("__CAMINHOS__", json.dumps(caminhos)), unsafe_allow_javascript=True)

@@ -8,7 +8,7 @@ from html import escape
 import pandas as pd
 import streamlit as st
 
-from componentes.dicas import com_dica
+from componentes.dicas import com_dica, texto_cortado
 from util.formatacao import brl_curto
 from util.i18n import t, t_plural
 
@@ -32,7 +32,8 @@ def faixa_status(pedidos: pd.DataFrame, vendedores: pd.DataFrame, produtos: pd.D
         com_dica(f'<span class="item"><span class="ponto {cor}"></span><b>{escape(num)}</b> {escape(rot)}</span>',
                  dica, alinhamento="inicio", limite=ESTOQUE_BAIXO)
         for cor, num, rot, dica in itens)
-    html += com_dica(f'<span class="banco">{t("status.banco", banco=f"<b>{escape(banco)}</b>", modo=escape(modo))}</span>',
+    banco_html = t("status.banco", banco=f"<b>{escape(banco)}</b>", modo=escape(modo))
+    html += com_dica(f'<span class="banco">{texto_cortado(t("status.banco", banco=banco, modo=modo), banco_html)}</span>',
                      "tooltips.status.banco", alinhamento="fim")
     st.html(f'<div class="faixa-status">{html}</div>')
 

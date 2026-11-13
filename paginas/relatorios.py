@@ -6,7 +6,7 @@ from componentes.acoes import carregar
 from componentes.dicas import ajuda, icone_dica
 from componentes.grafico import grafico_barras
 from componentes.layout import lado_a_lado, painel, titulo_html
-from componentes.tabela import tabela
+from componentes.tabela import ESPACO_RELATORIO_LARGO, tabela
 from dados import regioes as dados_regioes
 from dados import relatorios as dados_relatorios
 from dados import vendedores as dados_vendedores
@@ -81,7 +81,7 @@ def render() -> None:
 def _clientes_de_uma_regiao() -> None:
     regioes = carregar(dados_regioes.listar)
     st.html(icone_dica("tooltips.relatorios.clientes_regiao"))
-    graf, tab = lado_a_lado("clientes_regiao")
+    graf, tab = lado_a_lado("clientes_regiao", proporcao=(2, 3))
     if regioes.empty:
         graf.info(t(f"{R}.sem_regioes"))
         return
@@ -106,7 +106,7 @@ def _clientes_de_uma_regiao() -> None:
         tabela(df, {"cliente": t("comum.cliente"), "qtd_pedidos": t("comum.pedidos"),
                     "total_vendido": t("comum.total_comprado"), "telefone": t("comum.telefone"),
                     "cpf_cnpj": t("comum.cpf_cnpj"), "email": t("comum.email"), "endereco": t("comum.endereco")},
-               moeda=("total_vendido",))
+               moeda=("total_vendido",), espaco=ESPACO_RELATORIO_LARGO)
 
 
 def _comissao_por_vendedor() -> None:
@@ -142,7 +142,6 @@ def _comissao_por_vendedor() -> None:
                                "quantidade_vendida": t("comum.qtd"), "total_vendido": t("comum.total_vendido"),
                                "percentual_efetivo": t(f"{R}.col_pct_efetivo"), "valor_comissao": t("comum.comissao")},
                        moeda=("total_vendido", "valor_comissao"), percentual=("percentual_efetivo",),
-                       quantidade=("quantidade_vendida",), altura="auto",
-                       larguras={"produto": 180, "qtd_pedidos": 62, "quantidade_vendida": 62},
+                       quantidade=("quantidade_vendida",), altura="auto", espaco=ESPACO_RELATORIO_LARGO,
                        ajudas={"percentual_efetivo": ajuda("tooltips.relatorios.pct_efetivo"),
                                "valor_comissao": ajuda("tooltips.relatorios.comissao_valor")})

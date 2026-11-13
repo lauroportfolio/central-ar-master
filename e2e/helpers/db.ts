@@ -174,8 +174,9 @@ export class Banco {
     return this.execComId('usp_CadastrarRegiao', 'id_regiao', { nome, fk_vendedor: idVendedor });
   }
 
-  criarCliente(nome: string, cpfCnpj: string, idRegiao: number) {
-    return this.execComId('usp_CadastrarCliente', 'id_cliente', { nome, cpf_cnpj: cpfCnpj, fk_regiao: idRegiao });
+  criarCliente(nome: string, cpfCnpj: string, idRegiao: number,
+               extras: { telefone?: string; email?: string; endereco?: string } = {}) {
+    return this.execComId('usp_CadastrarCliente', 'id_cliente', { nome, cpf_cnpj: cpfCnpj, fk_regiao: idRegiao, ...extras });
   }
 
   criarProduto(descricao: string, preco: number, estoque: number) {

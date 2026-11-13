@@ -150,7 +150,7 @@ body:has(.marca-cadastros) [data-testid="stTopNavSection"] p {
 /* ------------------------------------------------------- Faixa de status */
 .faixa-status {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 0.4rem 1.6rem;
     padding: 0 0.25rem;
@@ -168,11 +168,14 @@ body:has(.marca-cadastros) [data-testid="stTopNavSection"] p {
     color: var(--texto);
 }
 .faixa-status .banco {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 0.3rem;
-    margin-left: auto;
+    min-width: 0;
     font-size: 0.8rem;
+}
+/* uma linha só: os itens não encolhem; o "Banco ..." (à direita) encolhe com "…" */
+.faixa-status > .com-dica {
+    flex-shrink: 0;
 }
 .ponto {
     display: inline-block;
@@ -203,13 +206,12 @@ body:has(.marca-cadastros) [data-testid="stTopNavSection"] p {
 .item-pedido .cliente {
     font-weight: 600;
     color: var(--texto);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    min-width: 0;
 }
 .item-pedido .detalhe {
     font-size: 0.8rem;
     color: var(--texto-suave);
+    min-width: 0;
 }
 .item-pedido .total {
     grid-row: 1 / span 2;
@@ -251,7 +253,12 @@ body:has(.marca-cadastros) [data-testid="stTopNavSection"] p {
     font-size: 0.75rem;
     color: var(--texto-suave);
 }
+.ficha > div,
+.ficha > .com-dica {
+    min-width: 0;
+}
 .ficha b {
+    display: block;
     color: var(--texto);
 }
 
@@ -385,6 +392,8 @@ html[data-tema="escuro"] {
 /* o item "Banco ..." continua no canto direito da faixa (o invólucro do tooltip é que é flexível) */
 .faixa-status > .com-dica:has(> .banco) {
     margin-left: auto;
+    flex-shrink: 1;
+    min-width: 0;
 }
 /* bloco inteiro com tooltip (ex.: cada card de "Últimos pedidos") */
 .com-dica.bloco {
@@ -399,4 +408,93 @@ html[data-tema="escuro"] {
 .icone-dica {
     color: var(--destaque-texto);
     font-weight: 700;
+}
+
+/* =========================================================================
+   Tabelas (st.dataframe / st.data_editor)
+   ========================================================================= */
+/* Toolbar do grid: escondemos os botões que o app não usa (a busca é a nossa, acima da
+   tabela; download e tela cheia não fazem parte do sistema; para desmarcar a linha há
+   o botão Novo). Sem eles a toolbar não cobre mais o campo Buscar. O editor de itens do
+   pedido novo continua com os botões de adicionar e excluir linha. Os rótulos são os
+   do próprio Streamlit (em inglês). */
+[data-testid="stElementToolbarButton"]:has(button:is(
+    [aria-label="Show/hide columns"], [aria-label="Download as CSV"], [aria-label="Search"],
+    [aria-label="Fullscreen"], [aria-label="Clear selection"])) {
+    display: none;
+}
+[data-testid="stDataFrame"] [data-testid="stElementToolbar"]:not(:has(
+    [data-testid="stElementToolbarButton"] button:not(
+        [aria-label="Show/hide columns"], [aria-label="Download as CSV"], [aria-label="Search"],
+        [aria-label="Fullscreen"], [aria-label="Clear selection"]))) {
+    display: none;
+}
+
+/* =========================================================================
+   Texto de uma linha com reticências (componentes/dicas.py: texto_cortado)
+   O balão com o texto completo só aparece quando o texto está cortado de verdade:
+   quem marca data-cortado é o observador instalado pelo app (scrollWidth maior que
+   clientWidth, recalculado quando o tamanho muda). O balão é o ::after, com o mesmo
+   visual do .dica acima.
+   ========================================================================= */
+.corte {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    max-width: 100%;
+    outline: none;
+    border-radius: 4px;
+}
+.corte-texto {
+    display: block;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.corte[data-cortado] {
+    cursor: help;
+}
+.corte[data-cortado]:focus-visible {
+    box-shadow: 0 0 0 2px var(--destaque);
+}
+.corte[data-cortado]::after {
+    content: attr(data-texto);
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 1000;
+    pointer-events: none;
+    background: var(--dica-fundo);
+    color: var(--dica-texto);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.45;
+    letter-spacing: normal;
+    text-transform: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+    max-width: 260px;
+    width: max-content;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.95);
+    transform-origin: top left;
+    transition: opacity 150ms ease-out, transform 150ms ease-out, visibility 0s linear 150ms;
+}
+.corte[data-cortado]:is(:hover, :focus-visible)::after {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+    transition: opacity 150ms ease-out 150ms, transform 150ms ease-out 150ms, visibility 0s linear 150ms;
+}
+/* texto cortado dentro de um elemento que já tem tooltip (ex.: card de Últimos pedidos):
+   sobre o texto cortado vale só o balão do texto completo */
+.com-dica:has(.corte[data-cortado]:hover) > .dica {
+    opacity: 0 !important;
+    visibility: hidden !important;
 }
