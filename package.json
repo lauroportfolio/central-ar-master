@@ -1,0 +1,17 @@
+{
+  "name": "central-ar-e2e",
+  "private": true,
+  "description": "Testes E2E (Playwright) do app Central de Ar. Só para desenvolvimento: o app em si é Python.",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:ver": "SLOW_MO=500 playwright test --headed --workers=1",
+    "e2e:ui": "playwright test --ui",
+    "e2e:relatorio": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@types/mssql": "12.3.0",
+    "@types/node": "26.6.6",
+    "mssql": "12.7.14"
+  }
+}

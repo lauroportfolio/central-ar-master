@@ -98,11 +98,20 @@ def _corpo_novo_pedido(clientes: pd.DataFrame, produtos: pd.DataFrame) -> float:
 
     st.markdown("**Itens do pedido** — clique em ➕ embaixo da tabela para adicionar linhas")
     prod = produtos.set_index("id_produto")
-    rotulos = {f"{i} — {prod.loc[i, 'descricao']}": i for i in prod.index}
+    # A lista de produtos do editor fica "congelada" a partir do 1º item digitado.
+    # Motivo: o st.data_editor com linhas dinâmicas é identificado também pelas opções das
+    # colunas; se alguém cadastrar um produto enquanto o pedido é montado, a lista mudaria
+    # e o Streamlit apagaria os itens já digitados. Com o editor vazio a lista é sempre a atual.
+    chave_editor = f"novo_itens_{versao}"
+    chave_opcoes = f"_opcoes_produtos_{versao}"
+    editor_vazio = not (st.session_state.get(chave_editor) or {}).get("added_rows")
+    if editor_vazio or chave_opcoes not in st.session_state:
+        st.session_state[chave_opcoes] = {f"{i} — {prod.loc[i, 'descricao']}": int(i) for i in prod.index}
+    rotulos = st.session_state[chave_opcoes]
     itens = st.data_editor(
         pd.DataFrame({"produto": pd.Series(dtype="object"), "quantidade": pd.Series(dtype="float"),
                       "preco_unitario": pd.Series(dtype="float"), "desconto": pd.Series(dtype="float")}),
-        num_rows="dynamic", width="stretch", key=f"novo_itens_{versao}",
+        num_rows="dynamic", width="stretch", key=chave_editor,
         column_config={
             "produto": st.column_config.SelectboxColumn("Produto", options=list(rotulos),
                                                         required=True, width="large"),
@@ -121,6 +130,8 @@ def _corpo_novo_pedido(clientes: pd.DataFrame, produtos: pd.DataFrame) -> float:
         if vazio(r.produto) or r.produto not in rotulos:
             continue
         id_produto = rotulos[r.produto]
+        if id_produto not in prod.index:      # produto excluído enquanto o pedido era montado
+            continue
         quantidade = 0.0 if vazio(r.quantidade) else float(r.quantidade)
         preco_informado = None if vazio(r.preco_unitario) else float(r.preco_unitario)
         preco = float(prod.loc[id_produto, "preco"]) if preco_informado is None else preco_informado
@@ -229,7 +240,8 @@ def _detalhe_pedido(sel: int, pedidos: pd.DataFrame, clientes: pd.DataFrame,
                     id_produto = st.selectbox(
                         "Produto", disponiveis,
                         format_func=lambda i: f"{prod.loc[i, 'descricao']} — {brl(prod.loc[i, 'preco'])} "
-                                              f"(estoque {qtd(prod.loc[i, 'estoque'])})")
+                                              f"(estoque {qtd(prod.loc[i, 'estoque'])})",
+                        key=f"item_incluir_produto_{sel}")
                     c1, c2, c3 = st.columns(3)
                     quantidade = c1.number_input("Quantidade", 0.001, None, 1.0, 1.0, "%.3f")
                     preco = c2.number_input("Preço unit. (R$)", 0.0, None, None, 10.0, "%.2f",
@@ -245,7 +257,8 @@ def _detalhe_pedido(sel: int, pedidos: pd.DataFrame, clientes: pd.DataFrame,
                 with st.form(f"pedido_editar_{sel}"):
                     id_cliente = st.selectbox(
                         "Cliente", ids_clientes, index=ids_clientes.index(p["id_cliente"]),
-                        format_func=lambda i: f"{cli.loc[i, 'nome']} — {cli.loc[i, 'regiao']}")
+                        format_func=lambda i: f"{cli.loc[i, 'nome']} — {cli.loc[i, 'regiao']}",
+                        key=f"pedido_editar_cliente_{sel}")
                     c1, c2 = st.columns(2)
                     percentual = c1.number_input("Comissão (%)", 0.0, 100.0,
                                                  float(p["percentual_comissao"]), 0.5, "%.2f")

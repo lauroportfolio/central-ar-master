@@ -254,4 +254,46 @@ ui/logo.svg                 logo da navbar
 sql/00_schema_reconstruido.sql   tabelas + 5 procedures originais
 sql/01_complemento.sql           comissão por pedido, trigger, CRUD e relatórios
 sql/02_seed.sql                  dados de exemplo
+e2e/                        testes automatizados (Playwright) — só para desenvolvimento
+package.json                dependências dos testes (Node) — o app não usa
 ```
+
+### Testes automatizados (desenvolvimento)
+
+> **Para usar o sistema você não precisa de nada disto** (nem Node, nem Playwright).
+> É só para quem desenvolve, no Linux/WSL com o container `central-ar-sql` rodando.
+
+Os testes abrem o app num navegador de verdade (Chromium), clicam como um usuário e
+conferem no banco se os dados entraram e saíram. Eles usam um **banco só de teste**,
+`CentralDeAr_E2E`, recriado do zero a cada execução a partir dos mesmos `.sql`. O banco
+`CentralDeAr` e o seu `.env` não são alterados (a senha do `sa` é lida do `.env`).
+
+```bash
+npm install                      # 1ª vez: dependências dos testes
+npx playwright install chromium  # 1ª vez: navegador dos testes
+
+npm run e2e                      # suíte inteira, sem janela (rápido)
+npm run e2e:ver                  # com janela, devagar (SLOW_MO=500), um teste por vez
+npm run e2e:ui                   # modo UI: lista de testes, linha do tempo, rodar um a um
+npm run e2e:relatorio            # relatório HTML da última execução
+
+# assistir um spec inteiro / um teste específico (filtro pelo título)
+SLOW_MO=500 npx playwright test e2e/pedidos.spec.ts --headed --workers=1
+SLOW_MO=500 npx playwright test e2e/clientes.spec.ts --headed --workers=1 -g "CPF"
+```
+
+Se a janela não abrir (WSL sem interface gráfica), use o modo UI pelo navegador do Windows:
+`npx playwright test --ui-host=0.0.0.0 --ui-port=9323` e abra <http://localhost:9323>.
+
+| Arquivo | O que testa |
+|---|---|
+| `e2e/vendedores.spec.ts`, `regioes`, `clientes`, `produtos` | cadastrar, buscar, editar, excluir; campos obrigatórios, comissão > 100, CPF/CNPJ repetido, exclusão bloqueada por dependentes |
+| `e2e/pedidos.spec.ts` | pedido com vendedor da região, comissão personalizada, itens com estoque (trigger), estoque insuficiente, excluir pedido |
+| `e2e/relatorios.spec.ts` | as 6 abas; pedido novo nos totais; totais por região = vendedor = produto |
+| `e2e/navegacao.spec.ts` | todas as telas sem erro e sem scroll de página em 1920×1080, 1366×768 e 1280×720 |
+| `e2e/fluxo-completo.spec.ts` | **demonstração**: um único teste em 17 etapas, do cadastro à exclusão, conferindo tela e banco a cada passo |
+
+O **fluxo completo** compara números gerais (pedidos, total vendido, comissões), então ele
+pede exclusividade do banco de teste enquanto roda: os outros testes esperam ele terminar.
+Para assistir: `SLOW_MO=500 npx playwright test e2e/fluxo-completo.spec.ts --headed --workers=1`
+(no modo UI, cada etapa aparece com o nome em português).

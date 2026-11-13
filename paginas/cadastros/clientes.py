@@ -37,7 +37,8 @@ def render() -> None:
                 telefone = c2.text_input("Telefone")
                 email = st.text_input("E-mail")
                 endereco = st.text_input("Endereço")
-                regiao = st.selectbox("Região *", ids_regioes, format_func=info_regiao.get)
+                regiao = st.selectbox("Região *", ids_regioes, format_func=info_regiao.get,
+                                      key="cliente_incluir_regiao")
                 if st.form_submit_button("Cadastrar cliente", type="primary"):
                     executar(dados_clientes.cadastrar, nome.strip(), so_digitos(cpf), int(regiao),
                              opcional(telefone), opcional(email), opcional(endereco),
@@ -54,7 +55,7 @@ def render() -> None:
             email = st.text_input("E-mail", texto(sel["email"]))
             endereco = st.text_input("Endereço", texto(sel["endereco"]))
             regiao = st.selectbox("Região *", ids_regioes, format_func=info_regiao.get,
-                                  index=ids_regioes.index(sel["id_regiao"]))
+                                  index=ids_regioes.index(sel["id_regiao"]), key=f"cliente_editar_regiao_{id_}")
             if st.form_submit_button("Salvar alterações", type="primary"):
                 executar(dados_clientes.atualizar, id_, nome.strip(), so_digitos(cpf), int(regiao),
                          opcional(telefone), opcional(email), opcional(endereco),

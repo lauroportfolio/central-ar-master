@@ -76,7 +76,8 @@ def _clientes_de_uma_regiao() -> None:
     with graf:
         id_regiao = st.selectbox("Região *", list(reg.index), index=None,
                                  placeholder="Escolha a região",
-                                 format_func=lambda i: f"{reg.loc[i, 'nome']} (vendedor: {reg.loc[i, 'vendedor']})")
+                                 format_func=lambda i: f"{reg.loc[i, 'nome']} (vendedor: {reg.loc[i, 'vendedor']})",
+                                 key="relatorio_regiao")
     if id_regiao is None:
         graf.info("Escolha uma região para ver os clientes.")
         return
@@ -100,7 +101,8 @@ def _comissao_por_vendedor() -> None:
     graf, tab = lado_a_lado("comissao", proporcao=(2, 3))
     with graf:
         id_vendedor = st.selectbox("Vendedor", [None, *nomes],
-                                   format_func=lambda i: "Todos os vendedores" if i is None else nomes[i])
+                                   format_func=lambda i: "Todos os vendedores" if i is None else nomes[i],
+                                   key="relatorio_vendedor")
         st.caption("Comissão calculada item a item com o percentual gravado em cada pedido. "
                    "“% efetivo” = comissão ÷ total vendido do produto.")
     df = carregar(dados_relatorios.comissao_por_vendedor, None if id_vendedor is None else int(id_vendedor))

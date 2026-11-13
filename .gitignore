@@ -3,3 +3,10 @@ __pycache__/
 .env
 *.log
 sql/*.bak
+
+# Testes E2E (Playwright)
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
